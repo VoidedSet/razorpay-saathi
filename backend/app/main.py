@@ -1,20 +1,32 @@
 """
 main.py — FastAPI entry point.
 
-Step 2 placeholder: /api/chat streams mock SSE tokens.
-Real LangGraph integration happens next.
+/api/chat  →  LangGraph graph  →  astream_events  →  SSE to frontend
+
+SSE event protocol (JSON on each `data:` line):
+  { "type": "audit", "agent": "Manager Agent", "detail": "Routing → Sales Agent" }
+  { "type": "token", "content": "Hello! " }
+  { "type": "done" }
+  { "type": "error", "message": "..." }
 """
 
-import asyncio
 import json
+import os
+import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from langchain_core.messages import HumanMessage
+from dotenv import load_dotenv
+
+from app.graph import build_graph, AgentState, AGENT_LABELS
+from app.config import active_config
+
+load_dotenv()
 
 app = FastAPI(title="Razorpay Saathi — Agentic Store Backend")
 
-# Allow the Next.js dev server to reach this API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -23,52 +35,118 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Compile graph once at startup (not on every request)
+_graph = build_graph()
+
+# ── Node names that are "agent" nodes (i.e., ones that stream tokens to UI) ──
+_AGENT_NODES = {"sales_agent", "billing_agent", "promo_agent"}
+_ALL_NODES   = {"manager"} | _AGENT_NODES
+
+
+# ── Request / Response ────────────────────────────────────────────────────────
 
 class ChatRequest(BaseModel):
     message: str
     session_id: str = "default"
+    history: list[dict] = []    # [{role: "user"|"assistant", content: "..."}]
 
 
-async def mock_stream(message: str):
+# ── SSE stream generator ───────────────────────────────────────────────────────
+
+async def langgraph_stream(req: ChatRequest):
     """
-    Yields Server-Sent Events (SSE) lines.
-    Each event is a JSON object that the frontend will parse.
-    Format mirrors what LangGraph will eventually emit.
+    Runs the LangGraph graph and converts astream_events into SSE lines.
+
+    Event filtering logic:
+      on_chain_start  (node name in _ALL_NODES)  → emit audit event
+      on_chain_end    (name == "manager")         → emit routing audit event
+      on_chat_model_stream (inside agent node)    → emit token event
+      graph done                                  → emit done event
     """
-    # Simulate Manager Agent routing decision
-    audit_events = [
-        {"type": "audit", "agent": "Manager Agent", "detail": f"Received message: '{message}'"},
-        {"type": "audit", "agent": "Manager Agent", "detail": "Routing to: Sales Agent"},
-        {"type": "audit", "agent": "Sales Agent",   "detail": "Composing response..."},
-    ]
 
-    for event in audit_events:
-        yield f"data: {json.dumps(event)}\n\n"
-        await asyncio.sleep(0.3)
+    # Rebuild conversation history from client-sent history
+    from langchain_core.messages import HumanMessage, AIMessage
+    history_messages = []
+    for turn in req.history:
+        if turn["role"] == "user":
+            history_messages.append(HumanMessage(content=turn["content"]))
+        elif turn["role"] == "assistant":
+            history_messages.append(AIMessage(content=turn["content"]))
 
-    # Simulate streaming tokens from Sales Agent
-    reply_tokens = "Hello! I'm your AI Sales Agent powered by Razorpay Saathi. How can I help you today?".split()
-    for token in reply_tokens:
-        chunk = {"type": "token", "content": token + " "}
-        yield f"data: {json.dumps(chunk)}\n\n"
-        await asyncio.sleep(0.05)
+    initial_state: AgentState = {
+        "messages":   history_messages + [HumanMessage(content=req.message)],
+        "next_agent": "",
+        "audit_log":  [],
+    }
 
-    # Signal stream end
-    yield f"data: {json.dumps({'type': 'done'})}\n\n"
+    def _sse(payload: dict) -> str:
+        return f"data: {json.dumps(payload)}\n\n"
 
+    current_node: str | None = None   # track which node is active
+
+    try:
+        async for event in _graph.astream_events(initial_state, version="v2"):
+            kind: str = event["event"]
+            name: str = event.get("name", "")
+
+            # ── Node started ──────────────────────────────────────────────────
+            if kind == "on_chain_start" and name in _ALL_NODES:
+                current_node = name
+                label = AGENT_LABELS.get(name, name)
+                yield _sse({
+                    "type":   "audit",
+                    "agent":  label,
+                    "detail": "Starting…",
+                })
+
+            # ── Manager finished → emit routing decision ───────────────────
+            elif kind == "on_chain_end" and name == "manager":
+                output     = event["data"].get("output", {})
+                next_agent = output.get("next_agent", "")
+                if next_agent:
+                    label = AGENT_LABELS.get(next_agent, next_agent)
+                    yield _sse({
+                        "type":   "audit",
+                        "agent":  "Manager Agent",
+                        "detail": f"Approved routing → {label}",
+                    })
+                current_node = None
+
+            # ── Agent node finished ────────────────────────────────────────
+            elif kind == "on_chain_end" and name in _AGENT_NODES:
+                current_node = None
+
+            # ── Token stream — only from agent nodes, never from manager ──
+            elif kind == "on_chat_model_stream" and current_node in _AGENT_NODES:
+                chunk = event["data"].get("chunk")
+                if chunk and hasattr(chunk, "content") and chunk.content:
+                    yield _sse({"type": "token", "content": chunk.content})
+
+        yield _sse({"type": "done"})
+
+    except Exception as exc:
+        yield _sse({"type": "error", "message": str(exc)})
+        yield _sse({"type": "done"})
+
+
+# ── Routes ────────────────────────────────────────────────────────────────────
 
 @app.post("/api/chat")
 async def chat(req: ChatRequest):
     return StreamingResponse(
-        mock_stream(req.message),
+        langgraph_stream(req),
         media_type="text/event-stream",
         headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",   # important for nginx proxying
+            "Cache-Control":    "no-cache",
+            "X-Accel-Buffering": "no",
         },
     )
 
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "razorpay-saathi-backend"}
+    return {
+        "status":     "ok",
+        "service":    "razorpay-saathi-backend",
+        "llm_config": active_config(),
+    }

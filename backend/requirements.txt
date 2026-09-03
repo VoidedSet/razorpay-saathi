@@ -3,6 +3,16 @@ uvicorn[standard]==0.30.6
 python-dotenv==1.0.1
 langgraph==0.2.28
 langchain-core==0.3.6
-langchain-openai==0.2.0
+langchain==0.3.0
+
+# ── LLM Provider Integrations ────────────────────────────────────────────────
+# Only the package for your chosen LLM_PROVIDER needs a valid API key.
+# All are included so you can switch providers without a reinstall.
+langchain-openai==0.2.0          # LLM_PROVIDER=openai   (GPT-4o, GPT-4o-mini …)
+langchain-anthropic==0.2.1       # LLM_PROVIDER=anthropic (claude-3-5-sonnet …)
+langchain-google-genai==2.0.0    # LLM_PROVIDER=google_genai (gemini-1.5-pro …)
+langchain-groq==0.2.0            # LLM_PROVIDER=groq     (llama-3.1-70b …)
+langchain-ollama==0.2.0          # LLM_PROVIDER=ollama   (local, no key needed)
+
 pydantic==2.9.2
 httpx==0.27.2

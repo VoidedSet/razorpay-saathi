@@ -18,7 +18,12 @@ interface DoneEvent {
   type: "done";
 }
 
-type SseEvent = AuditEvent | TokenEvent | DoneEvent;
+interface ErrorEvent {
+  type: "error";
+  message: string;
+}
+
+type SseEvent = AuditEvent | TokenEvent | DoneEvent | ErrorEvent;
 
 interface Message {
   role: "user" | "assistant";
@@ -32,7 +37,7 @@ function useAgentChat() {
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
 
-  const sendMessage = async (text: string) => {
+  const sendMessage = async (text: string, currentMessages: Message[]) => {
     if (!text.trim() || streaming) return;
 
     const userMsg: Message = { role: "user", content: text, auditLog: [] };
@@ -41,18 +46,27 @@ function useAgentChat() {
     setStreaming(true);
 
     // Placeholder assistant message we'll fill in as tokens arrive
-    const assistantIdx = messages.length + 1;
     setMessages((prev) => [
       ...prev,
       { role: "assistant", content: "", auditLog: [] },
     ]);
 
+    // Build history for the backend (exclude the placeholder we just added)
+    const history = currentMessages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
     try {
       const res = await fetch("http://localhost:8000/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: text, history }),
       });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
 
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
@@ -81,6 +95,8 @@ function useAgentChat() {
               msg.auditLog = [...msg.auditLog, event];
             } else if (event.type === "token") {
               msg.content += event.content;
+            } else if (event.type === "error") {
+              msg.content = `⚠️ Agent error: ${event.message}`;
             }
             next[next.length - 1] = msg;
             return next;
@@ -151,7 +167,7 @@ export default function Home() {
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
-    sendMessage(input);
+    sendMessage(input, messages);
   };
 
   return (
