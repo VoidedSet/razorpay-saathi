@@ -30,7 +30,6 @@ interface ProductCardProps {
   category?: string;
   price: number;
   image?: string;
-  emoji?: string;
   description?: string;
   specs?: { label: string; value: string }[];
   recommended?: boolean;
@@ -40,7 +39,6 @@ interface CheckoutItem {
   name: string;
   qty: number;
   price: number;
-  emoji?: string;
 }
 
 interface CheckoutProps {
@@ -61,16 +59,17 @@ interface CustomProps {
 // ── Predefined components ───────────────────────────────────────────────────────
 
 function ProductCard({ data, onAction }: { data: ProductCardProps; onAction: OnAction }) {
-  const { name, brand, category, price, image, emoji, description, specs, recommended } = data;
+  const { name, brand, category, price, image, description, specs, recommended } = data;
+  const monogram = (brand || name || "?").trim().charAt(0).toUpperCase();
   return (
     <div className={`genui-card genui-product${recommended ? " is-recommended" : ""}`}>
-      {recommended && <span className="genui-badge">★ Recommended</span>}
+      {recommended && <span className="genui-badge">Recommended</span>}
       <div className="genui-product-media">
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={image} alt={name} />
         ) : (
-          <span className="genui-emoji" aria-hidden="true">{emoji || "🛍️"}</span>
+          <span className="genui-monogram" aria-hidden="true">{monogram}</span>
         )}
       </div>
       <div className="genui-product-body">
@@ -111,7 +110,7 @@ function CheckoutWidget({ data }: { data: CheckoutProps }) {
   return (
     <div className="genui-card genui-checkout">
       <div className="genui-checkout-head">
-        <span className="genui-checkout-title">🧾 Order Summary</span>
+        <span className="genui-checkout-title">Order Summary</span>
         {typeof ceiling === "number" && (
           <span className="genui-ceiling">Max discount {ceiling}%</span>
         )}
@@ -121,7 +120,6 @@ function CheckoutWidget({ data }: { data: CheckoutProps }) {
         {(items ?? []).map((it, i) => (
           <div key={i} className="genui-checkout-row">
             <span>
-              {it.emoji ? `${it.emoji} ` : ""}
               {it.name} <span className="genui-muted">× {it.qty}</span>
             </span>
             <span className="genui-mono">{inr(it.price * it.qty)}</span>
@@ -139,7 +137,7 @@ function CheckoutWidget({ data }: { data: CheckoutProps }) {
           <div className="genui-offers-title">Razorpay Bank Offers</div>
           {offers.map((o, i) => (
             <div key={i} className="genui-offer-row">
-              <span>💳 {o.label}</span>
+              <span>{o.label}</span>
               {o.code && <code className="genui-offer-code">{o.code}</code>}
             </div>
           ))}

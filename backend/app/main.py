@@ -6,7 +6,7 @@ main.py — FastAPI entry point.
 SSE event protocol (JSON on each `data:` line):
   { "type": "audit",      "agent": "Manager Agent", "detail": "...", "model": "...", "ms": 230 }
   { "type": "token",      "content": "Hello " }
-  { "type": "correction", "message": "🔒 Manager policy override: ..." }  ← Manager overrode the response
+  { "type": "correction", "message": "Manager policy override: ..." }  ← Manager overrode the response
   { "type": "component",  "component": "product_card", "props": {...} }  ← generative-UI card streamed to the registry
   { "type": "error",      "message": "..." }
   { "type": "done",       "session_phase": "checkout" }   ← client persists this
@@ -63,6 +63,69 @@ class ChatRequest(BaseModel):
     agent_profile: dict       = {}          # A2A: {name, preferences, budget, currency}
 
 
+# ── <think> stream filter ───────────────────────────────────────────────────────
+# Reasoning models (e.g. Qwen) emit their chain-of-thought as ordinary content
+# tokens wrapped in <think>...</think>. We strip those spans from the customer-
+# facing token stream, safely across chunk boundaries (a tag may be split between
+# two chunks).
+
+def _partial_tag_suffix(s: str, tag: str) -> int:
+    """Longest k in [1, len(tag)-1] such that s ends with tag[:k] (a split-open tag)."""
+    for k in range(min(len(s), len(tag) - 1), 0, -1):
+        if s.endswith(tag[:k]):
+            return k
+    return 0
+
+
+class _ThinkStripper:
+    """Removes <think>...</think> spans from a streamed token sequence."""
+
+    _OPEN = "<think>"
+    _CLOSE = "</think>"
+
+    def __init__(self) -> None:
+        self._in_think = False
+        self._buf = ""
+
+    def feed(self, text: str) -> str:
+        self._buf += text or ""
+        out: list[str] = []
+        while self._buf:
+            if not self._in_think:
+                idx = self._buf.find(self._OPEN)
+                if idx != -1:
+                    out.append(self._buf[:idx])
+                    self._buf = self._buf[idx + len(self._OPEN):]
+                    self._in_think = True
+                    continue
+                keep = _partial_tag_suffix(self._buf, self._OPEN)
+                if keep:
+                    out.append(self._buf[:-keep])
+                    self._buf = self._buf[-keep:]
+                else:
+                    out.append(self._buf)
+                    self._buf = ""
+                break
+            else:
+                idx = self._buf.find(self._CLOSE)
+                if idx != -1:
+                    self._buf = self._buf[idx + len(self._CLOSE):]
+                    self._in_think = False
+                    continue
+                keep = _partial_tag_suffix(self._buf, self._CLOSE)
+                self._buf = self._buf[-keep:] if keep else ""
+                break
+        return "".join(out)
+
+    def flush(self) -> str:
+        """Emit any trailing buffered text at stream end; drop an unclosed think."""
+        if self._in_think:
+            self._buf = ""
+            return ""
+        out, self._buf = self._buf, ""
+        return out
+
+
 # ── SSE stream ────────────────────────────────────────────────────────────────
 
 async def langgraph_stream(req: ChatRequest):
@@ -87,6 +150,7 @@ async def langgraph_stream(req: ChatRequest):
         "agent_profile":    req.agent_profile,
         "manager_correction": "",  # set by manager_audit when a response is overridden
         "ui_components":    [],     # generative-UI components streamed to the frontend registry
+        "just_entered_checkout": False,  # set by manager_init; gates the checkout widget
     }
 
     def _sse(payload: dict) -> str:
@@ -98,6 +162,7 @@ async def langgraph_stream(req: ChatRequest):
     final_phase:       str          = req.session_phase
     last_audit_count:  int          = 0   # track which audit entries are new
     last_component_count: int       = 0   # track which ui_components are new
+    think:  _ThinkStripper | None   = None  # strips <think>...</think> from the live stream
 
     try:
         async for event in _graph.astream_events(initial_state, version="v2"):
@@ -128,6 +193,7 @@ async def langgraph_stream(req: ChatRequest):
 
             # ── LLM call started — capture model name ─────────────────────────
             elif kind == "on_chat_model_start" and current_node:
+                think = _ThinkStripper()   # fresh reasoning-token filter per LLM call
                 model = meta.get("ls_model_name") or name
                 node_models[current_node] = model
                 label    = AGENT_LABELS.get(current_node, current_node)
@@ -187,11 +253,20 @@ async def langgraph_stream(req: ChatRequest):
 
                 current_node = None
 
-            # ── Token stream — agent nodes only ──────────────────────────────
+            # ── Token stream — agent nodes only (with <think> filtered out) ───
             elif kind == "on_chat_model_stream" and current_node in _AGENT_NODES:
                 chunk = data.get("chunk")
                 if chunk and hasattr(chunk, "content") and chunk.content:
-                    yield _sse({"type": "token", "content": chunk.content})
+                    visible = think.feed(chunk.content) if think else chunk.content
+                    if visible:
+                        yield _sse({"type": "token", "content": visible})
+
+            # ── LLM call finished — flush any tail held by the <think> filter ─
+            elif kind == "on_chat_model_end" and current_node in _AGENT_NODES:
+                if think:
+                    tail = think.flush()
+                    if tail:
+                        yield _sse({"type": "token", "content": tail})
 
         # Include updated phase so frontend can persist it
         yield _sse({"type": "done", "session_phase": final_phase})

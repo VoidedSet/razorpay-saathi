@@ -8,19 +8,20 @@ catalog and the Manager-approved discount ceiling.
 Two holes this closes (both observed in convo.log):
 
   1. HALLUCINATED PRODUCTS — the model invented IDs/prices that don't exist,
-     e.g. `prod_sm_s23lte` (₹94,999) and `prod_acc_charger_gold`.
+     e.g. `prod_shoe_galaxy` and `prod_shoe_gold_ltd`.
 
-  2. RUPEE-SMUGGLED DISCOUNTS — the model "negotiated" a phone from ₹32,999
-     down to ₹27,999 (≈15%). The old audit only scanned for the literal
+  2. RUPEE-SMUGGLED DISCOUNTS — the model "negotiated" a sneaker from ₹10,999
+     down to ₹9,000 (≈18%). The old audit only scanned for the literal
      pattern "N% off", so an absolute-rupee cut sailed through as clean.
 
 Grounding strategy for price checks: we only flag a quoted price as a
 below-ceiling discount when it can be *tied to a real product* — either the
 agent named the product's `prod_...` id in the same message, or the product is
 already in the session cart. A quoted amount counts as "that product's price"
-only when it lands in the product's [50%, 100%) catalog band, which keeps
-accessory prices, offer amounts (₹500, ₹1,000) and cart totals from being
-mistaken for a discount on the headline item.
+only when it lands in the product's [50%, 100%) catalog band AND it is not the
+exact catalog price of some other grounded product, and offer/eligibility
+thresholds ("on orders ≥ ₹8,000") are stripped first — so cart totals, bank
+offer amounts, and co-quoted product prices are never mistaken for a discount.
 """
 
 import re
@@ -45,6 +46,22 @@ _PCT_DISCOUNT_RE = re.compile(
 # the catalog price. Below the band → it's some other (cheaper) line item;
 # at/above catalog → it's just quoting the real price, not a discount.
 _PRICE_BAND_LOW = 0.50
+
+# Amounts that are offer/eligibility THRESHOLDS ("on orders ≥ ₹8,000", "above
+# ₹5,000") rather than a quoted product price — blanked out before the discount-
+# band check so a bank offer's minimum-order figure is never read as a discount.
+_THRESHOLD_AMOUNT_RE = re.compile(
+    r"(?:≥|>=|>|\babove\b|\bover\b|\bminimum\b|\bmin\.?\b|\bat\s+least\b|"
+    r"\border(?:s)?\s+(?:of\s+)?(?:≥|>=|>|above|over)?|"
+    r"\bpurchase(?:s)?\s+(?:of\s+)?(?:≥|>=|>|above|over)?)"
+    r"\s*(?:₹|rs\.?\s*)?[\d][\d,]*",
+    re.IGNORECASE,
+)
+
+
+def _strip_threshold_amounts(text: str) -> str:
+    """Blank out offer-threshold amounts so they aren't read as discounted prices."""
+    return _THRESHOLD_AMOUNT_RE.sub(" ", text or "")
 
 
 def extract_product_ids(text: str) -> list[str]:
@@ -111,7 +128,14 @@ def audit_response(
         if pid and pid not in grounded:
             grounded[pid] = item
 
-    prices = extract_prices(text)
+    # Strip offer/eligibility thresholds first so a "≥ ₹8,000" minimum isn't read
+    # as a discounted price for a similarly-priced item.
+    prices = extract_prices(_strip_threshold_amounts(text))
+    # Exact catalog prices of grounded products are real prices, not discounts —
+    # this stops one product's price from tripping a similarly-priced product's band.
+    known_catalog_prices = {
+        (p.get("price_inr") or p.get("price") or 0) for p in grounded.values()
+    }
     price_violations: list[dict] = []
     seen_pids: set[str] = set()
 
@@ -122,9 +146,10 @@ def audit_response(
         floor = floor_price(catalog, ceiling_pct)
         band_low = catalog * _PRICE_BAND_LOW
         for p in prices:
-            # p is a discounted price for THIS product only if it sits inside
-            # the product's own price band and dips below the allowed floor.
-            if band_low <= p < floor and pid not in seen_pids:
+            # p is a discounted price for THIS product only if it sits inside the
+            # product's own price band, dips below the allowed floor, and isn't just
+            # some other grounded product's real catalog price.
+            if band_low <= p < floor and p not in known_catalog_prices and pid not in seen_pids:
                 price_violations.append({
                     "product_id":    pid,
                     "name":          product.get("name", pid),
@@ -181,7 +206,7 @@ def build_manager_correction(audit: dict, ceiling_pct: float) -> Optional[str]:
             f"• {v['pct']:g}% {v['type']} exceeds the approved {ceiling_pct:g}% ceiling."
         )
 
-    header = "🔒 Manager policy override:"
+    header = "Manager policy override:"
     return header + "\n" + "\n".join(lines)
 
 
@@ -194,14 +219,14 @@ def audit_log_entries(audit: dict, ceiling_pct: float) -> list[dict]:
     for pid in audit.get("hallucinated_ids", []):
         entries.append({
             "agent":  "Manager Agent",
-            "detail": f"🚨 GROUNDING VIOLATION: '{pid}' not found in catalog — hallucinated product blocked",
+            "detail": f"GROUNDING VIOLATION: '{pid}' not found in catalog — hallucinated product blocked",
         })
 
     for v in audit.get("price_violations", []):
         entries.append({
             "agent":  "Manager Agent",
             "detail": (
-                f"🚨 PRICE VIOLATION: {v['name']} quoted ₹{v['quoted']:,} "
+                f"PRICE VIOLATION: {v['name']} quoted ₹{v['quoted']:,} "
                 f"(≈{v['effective_pct']:g}% off) — floor is ₹{v['floor']:,} at {ceiling_pct:g}% ceiling"
             ),
         })
@@ -209,13 +234,13 @@ def audit_log_entries(audit: dict, ceiling_pct: float) -> list[dict]:
     for v in audit.get("pct_violations", []):
         entries.append({
             "agent":  "Manager Agent",
-            "detail": f"🚨 AUDIT VIOLATION: {v['pct']:g}% {v['type']} exceeds {ceiling_pct:g}% ceiling",
+            "detail": f"AUDIT VIOLATION: {v['pct']:g}% {v['type']} exceeds {ceiling_pct:g}% ceiling",
         })
 
     if audit.get("clean"):
         entries.append({
             "agent":  "Manager Agent",
-            "detail": "✅ AUDIT: products & pricing verified against catalog — no violations",
+            "detail": "AUDIT: products & pricing verified against catalog — no violations",
         })
 
     return entries
