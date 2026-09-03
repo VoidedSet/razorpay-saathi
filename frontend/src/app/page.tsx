@@ -241,38 +241,84 @@ function useAgentChat() {
   return { messages, setMessages, input, setInput, streaming, sessionPhase, sendMessage };
 }
 
-// ── Interactive Minimal AI Thinking Steps Component ──────────────────────────
-function ThinkingAccordion({ log }: { log: AuditEvent[] }) {
-  const [expanded, setExpanded] = useState(false);
-  if (log.length === 0) return null;
+// ── Stepper Timeline AI Thinking (Matches Image 3 Style - Plain Transparent Div) ──
+function ThinkingStepperTimeline({ log }: { log: AuditEvent[] }) {
+  const [timelineOpen, setTimelineOpen] = useState(true);
+  const [expandedStepIdx, setExpandedStepIdx] = useState<number | null>(null);
+
+  if (!log || log.length === 0) return null;
 
   const lastMs = [...log].reverse().find((e) => e.ms)?.ms;
 
   return (
-    <div className="thinking-accordion">
+    <div className="stepper-transparent-container">
+      {/* Top Level Toggle */}
       <button
         type="button"
-        className="thinking-toggle-btn"
-        onClick={() => setExpanded((prev) => !prev)}
+        className="stepper-main-toggle"
+        onClick={() => setTimelineOpen((prev) => !prev)}
       >
-        <span>{expanded ? "▴ Hide Reasoning" : "▾ Reasoning Steps"}</span>
-        <span>• {log.length} steps</span>
-        {lastMs && <span>({lastMs >= 1000 ? `${(lastMs / 1000).toFixed(1)}s` : `${lastMs}ms`})</span>}
+        <span>{timelineOpen ? "▾ Reasoning Timeline" : "▸ Reasoning Timeline"}</span>
+        <span className="stepper-meta-tag">• {log.length} steps</span>
+        {lastMs && <span className="stepper-time-tag">({lastMs >= 1000 ? `${(lastMs / 1000).toFixed(1)}s` : `${lastMs}ms`})</span>}
       </button>
 
-      {expanded && (
-        <div className="thinking-steps-card">
-          {log.map((step, idx) => (
-            <div key={idx} className="thinking-step-row">
-              <span className="thinking-agent-tag">{step.agent}</span>
-              <span className="thinking-step-detail">{step.detail}</span>
-              {step.ms && (
-                <span className="thinking-time-pill">
-                  {step.ms >= 1000 ? `${(step.ms / 1000).toFixed(1)}s` : `${step.ms}ms`}
-                </span>
-              )}
-            </div>
-          ))}
+      {timelineOpen && (
+        <div className="stepper-timeline-list">
+          {log.map((step, idx) => {
+            const isLast = idx === log.length - 1;
+            const isExpanded = expandedStepIdx === idx || isLast; // Active/last step shows details, finished steps show title + tick!
+
+            return (
+              <div key={idx} className="stepper-item">
+                {/* Connecting Line */}
+                {!isLast && <div className="stepper-line" />}
+
+                {/* Circle Badge */}
+                <div className={`stepper-circle ${isLast ? "circle-blue" : "circle-done"}`}>
+                  {isLast ? (
+                    <span>{idx + 1}</span>
+                  ) : (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  )}
+                </div>
+
+                {/* Content */}
+                <div className="stepper-content-box">
+                  <div
+                    className="stepper-header-row"
+                    onClick={() => setExpandedStepIdx(isExpanded ? null : idx)}
+                  >
+                    <span className="stepper-agent-name">{step.agent}</span>
+                    {!isExpanded && (
+                      <span className="stepper-summary-line">
+                        {step.detail.length > 35 ? `${step.detail.slice(0, 35)}...` : step.detail} <span className="stepper-check-tick">✓</span>
+                      </span>
+                    )}
+                    {step.ms && (
+                      <span className="stepper-step-time">
+                        {step.ms >= 1000 ? `${(step.ms / 1000).toFixed(1)}s` : `${step.ms}ms`}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Expanded Details when active/toggled */}
+                  {isExpanded && (
+                    <div className="stepper-detail-expanded">
+                      <p className="stepper-detail-text">{step.detail}</p>
+                      {step.model && (
+                        <div className="stepper-tag-row">
+                          <span className="stepper-model-badge">{step.model}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -294,9 +340,6 @@ export default function Home() {
   const [cartOpen, setCartOpen] = useState(false);
   const [couponInput, setCouponInput] = useState("");
   const [toast, setToast] = useState<string | null>(null);
-
-  // Modal State
-  const [activeProduct, setActiveProduct] = useState<Product | null>(null);
 
   // Agent Chat Hook
   const { messages, setMessages, input, setInput, streaming, sessionPhase, sendMessage } = useAgentChat();
@@ -490,11 +533,11 @@ export default function Home() {
             <div className="product-grid">
               {filteredProducts.map((p) => (
                 <div key={p.id} className="product-card">
-                  <div className="product-img-wrapper" onClick={() => setActiveProduct(p)}>
+                  <div className="product-img-wrapper" onClick={() => addToCart(p)}>
                     <img src={p.image} alt={p.title} />
                   </div>
                   <div className="product-info">
-                    <h3 className="product-title" onClick={() => setActiveProduct(p)}>
+                    <h3 className="product-title" onClick={() => addToCart(p)}>
                       {p.title}
                     </h3>
                     <div className="price-row">
@@ -511,7 +554,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* VIEW 2: FULL-PAGE AGENT CHAT STORE (100% LIGHT THEME WITH SMOOTH ANIMATION) */}
+      {/* VIEW 2: FULL-PAGE AGENT CHAT STORE */}
       {mode === "agent" && (
         <div className="agent-chat-layout view-enter-agent">
           <main className="agent-chat-container">
@@ -537,7 +580,7 @@ export default function Home() {
                       {m.correction}
                     </div>
                   )}
-                  {m.role === "assistant" && <ThinkingAccordion log={m.auditLog} />}
+                  {m.role === "assistant" && <ThinkingStepperTimeline log={m.auditLog} />}
                 </div>
               ))}
               <div ref={bottomRef} />
@@ -572,21 +615,37 @@ export default function Home() {
           </main>
 
           <aside className="agent-right-panel">
+            {/* Curated Selection: Vertical Carousel */}
             <div className="panel-card">
               <h3 className="panel-card-title">Curated Selection</h3>
-              {PRODUCTS.slice(0, 4).map((p) => (
-                <div key={p.id} className="rec-shoe-item">
-                  <img src={p.image} alt={p.title} className="rec-shoe-img" />
-                  <div>
-                    <h4 className="rec-shoe-title">{p.title}</h4>
-                    <div className="rec-shoe-price">${p.price}</div>
+              <div className="vertical-carousel">
+                {PRODUCTS.map((p) => (
+                  <div key={p.id} className="carousel-card" onClick={() => addToCart(p)}>
+                    <img src={p.image} alt={p.title} className="rec-shoe-img" />
+                    <div>
+                      <h4 className="rec-shoe-title">{p.title}</h4>
+                      <div className="rec-shoe-price">${p.price}</div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
+            {/* Cart Summary with Item Thumbnail Icons */}
             <div className="panel-card">
               <h3 className="panel-card-title">Cart Summary</h3>
+
+              {cart.length > 0 && (
+                <div className="cart-icons-row">
+                  {cart.map((item) => (
+                    <div key={item.product.id} className="cart-icon-thumb-wrapper" title={`${item.product.title} (x${item.quantity})`}>
+                      <img src={item.product.image} alt={item.product.title} className="cart-icon-thumb" />
+                      {item.quantity > 1 && <span className="cart-thumb-qty">{item.quantity}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div style={{ fontSize: "0.9rem" }}>
                 {cart.length === 0 ? (
                   <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Cart is empty.</p>
@@ -686,32 +745,6 @@ export default function Home() {
           </button>
         </div>
       </div>
-
-      {/* Quick View Modal */}
-      {activeProduct && (
-        <div className="modal-overlay active" onClick={() => setActiveProduct(null)}>
-          <div className="product-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="close-btn modal-close" onClick={() => setActiveProduct(null)}>✕</button>
-            <div className="modal-content-grid">
-              <div className="modal-img-col">
-                <img src={activeProduct.image} alt={activeProduct.title} />
-              </div>
-              <div className="modal-info-col">
-                <div>
-                  <h2>{activeProduct.title}</h2>
-                  <div className="price-row" style={{ marginBottom: "1rem" }}>
-                    <span className="current-price">${activeProduct.price}</span>
-                  </div>
-                  <p>{activeProduct.description}</p>
-                </div>
-                <button className="add-to-cart-btn" onClick={() => { addToCart(activeProduct); setActiveProduct(null); }}>
-                  Add to Cart — ${activeProduct.price}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Toast */}
       {toast && (

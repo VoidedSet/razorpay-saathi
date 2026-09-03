@@ -37,6 +37,9 @@ from app import guardrails
 # ── Store Hard Policy Fallback ────────────────────────────────────────────────
 _HARD_POLICY_MAX_DISCOUNT_PCT = 15.0
 
+# Max product cards streamed per search — keep the Gen UI restrained, not spammy.
+_MAX_PRODUCT_CARDS = 3
+
 
 # ── State ─────────────────────────────────────────────────────────────────────
 
@@ -54,6 +57,7 @@ class AgentState(TypedDict):
     agent_profile:     dict       # A2A: {name, preferences, budget, currency}
     manager_correction: str       # user-visible Manager override, set by audit when a response is dirty
     ui_components:      list[dict] # generative-UI components streamed to the frontend registry
+    just_entered_checkout: bool   # True only on the first turn we enter checkout (gates the widget)
 
 
 # ── Phase detection (pure function — no LLM) ──────────────────────────────────
@@ -105,6 +109,26 @@ _INJECTION_PATTERNS = [
 ]
 
 
+# ── Reasoning-token stripper ───────────────────────────────────────────────────
+# Reasoning models (e.g. Qwen) wrap chain-of-thought in <think>...</think>. It must
+# never reach the customer OR the Manager's audit (the hidden reasoning can echo
+# stray numbers that look like prices). main.py strips it from the live token
+# stream; this strips the stored response before it is audited.
+_THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
+
+
+def _strip_think(text: str) -> str:
+    """Remove <think>...</think> blocks (and any unterminated trailing think)."""
+    if not text:
+        return text
+    cleaned = _THINK_RE.sub("", text)
+    low = cleaned.lower()
+    open_idx = low.rfind("<think>")
+    if open_idx != -1 and "</think>" not in low[open_idx:]:
+        cleaned = cleaned[:open_idx]
+    return cleaned.strip()
+
+
 # ── System prompts ────────────────────────────────────────────────────────────
 
 def _sales_system_prompt(state: AgentState) -> str:
@@ -153,7 +177,7 @@ YOUR RULES:
    to be handed to the Billing Agent.
 5. The Manager Agent validates every response against the live catalog and the {ceiling}% ceiling.
    Fake products or below-ceiling prices are overridden and shown to the customer — so stay grounded.
-6. Keep responses concise (2-4 sentences) and professional."""
+6. Keep responses concise (2-4 sentences), professional, and free of emojis or decorative symbols."""
 
 
 def _billing_system_prompt(
@@ -206,7 +230,7 @@ YOUR STEPS:
 3. Share the Razorpay Payment Link shown above so the customer can pay.
 4. Ask for preferred payment mode (UPI, HDFC Credit Card, Netbanking).
 
-Be transactional, fast, and reassuring. Do NOT exceed the Manager's discount ceiling."""
+Be transactional, fast, and reassuring. Do NOT use emojis or decorative symbols. Do NOT exceed the Manager's discount ceiling."""
 
 
 def _support_system_prompt(state: AgentState) -> str:
@@ -216,7 +240,7 @@ def _support_system_prompt(state: AgentState) -> str:
     return f"""You are the Customer Support Agent for Razorpay Saathi.
 Customer: {name} | Recent purchases: {', '.join(history[-2:]) if history else 'none'}
 Help with order issues, returns, refunds, complaints. Be empathetic and solution-focused.
-Escalate financial decisions (refunds > ₹1,000) to the Manager Agent."""
+Escalate financial decisions (refunds > ₹1,000) to the Manager Agent. Avoid emojis and decorative symbols."""
 
 
 # ── Agent labels (for SSE audit events) ──────────────────────────────────────
@@ -235,13 +259,8 @@ AGENT_LABELS = {
 # Agents "fill in the values" but the SERVER grounds every authoritative field
 # (id / price / total / payment link) from the DB, so numbers can't be
 # hallucinated. `custom` is the escape hatch: an agent authors it via the
-# render_custom_ui tool when nothing predefined fits.
-
-_CATEGORY_EMOJI = {
-    "smartphone": "📱", "laptop": "💻", "earbuds": "🎧", "charger": "🔌",
-    "powerbank": "🔋", "case": "🛡️", "screen-protector": "🛡️", "tablet": "📲",
-    "watch": "⌚", "sneakers": "👟", "shoes": "👟",
-}
+# render_custom_ui tool when nothing predefined fits. Cards use a text monogram
+# on the frontend — no emojis.
 
 
 def _product_card_props(product: dict, recommended: bool = False) -> dict:
@@ -260,8 +279,7 @@ def _product_card_props(product: dict, recommended: bool = False) -> dict:
         "category":    product.get("category", ""),
         "price":       product["price_inr"],
         "currency":    "INR",
-        "image":       product.get("image_url") or "",   # no image column yet → emoji fallback
-        "emoji":       _CATEGORY_EMOJI.get(product.get("category", ""), "🛍️"),
+        "image":       product.get("image_url") or "",   # no image column yet → monogram fallback
         "description": product.get("description", ""),
         "stock":       product.get("stock", 0),
         "specs":       spec_items,
@@ -277,7 +295,6 @@ def _checkout_widget_props(cart_items: list[dict], total: int, offers: list[dict
         "name":  i["name"],
         "qty":   i.get("qty", 1),
         "price": i.get("price_inr", i.get("price", 0)),
-        "emoji": _CATEGORY_EMOJI.get(i.get("category", ""), "🛍️"),
     } for i in cart_items]
 
     offer_rows = []
@@ -368,6 +385,9 @@ async def manager_init_node(state: AgentState) -> dict:
     current_phase = state.get("session_phase", "browsing")
     new_phase     = _detect_phase(last_msg, current_phase)
     updates["session_phase"] = new_phase
+    # Surface the checkout widget only on the FIRST turn we enter checkout — not on
+    # every later billing turn (payment-mode follow-ups, etc.).
+    updates["just_entered_checkout"] = new_phase == "checkout" and current_phase != "checkout"
 
     if new_phase != current_phase:
         new_entries.append({
@@ -383,10 +403,10 @@ async def manager_init_node(state: AgentState) -> dict:
             break
 
     if violation:
-        notes.append(f"⚠️ Guardrail: {violation} detected in message")
+        notes.append(f"Guardrail: {violation} detected in message")
         new_entries.append({
             "agent":  "Manager Agent",
-            "detail": f"🚨 GUARDRAIL TRIGGERED: {violation} — request sanitised",
+            "detail": f"GUARDRAIL TRIGGERED: {violation} — request sanitised",
         })
     else:
         target = {"checkout": "Billing", "support": "Support"}.get(new_phase, "Sales")
@@ -424,7 +444,7 @@ async def manager_audit_node(state: AgentState) -> dict:
     if last_ai:
         ceiling = state.get("discount_ceiling", _HARD_POLICY_MAX_DISCOUNT_PCT)
         cart    = db.get_cart(state.get("session_id", "default"))
-        audit   = guardrails.audit_response(last_ai.content, ceiling, cart)
+        audit   = guardrails.audit_response(_strip_think(last_ai.content), ceiling, cart)
 
         new_entries.extend(guardrails.audit_log_entries(audit, ceiling))
 
@@ -524,23 +544,39 @@ async def sales_tools_node(state: AgentState) -> dict:
                 if cross_sell:
                     db_text += f"\n\nRECOMMENDED CROSS-SELL / ACCESSORIES:\n{db.format_products_for_prompt(cross_sell)}"
 
-            # Gen UI: stream grounded product cards (top search hits + cross-sell picks)
-            for p in products[:3]:
+            # Gen UI: stream a few grounded product cards — deduped and capped so the
+            # chat never gets spammed. Search hits first, then recommended cross-sell
+            # fills any remaining slots.
+            seen_card_ids: set[str] = set()
+            n_search_cards = n_rec_cards = 0
+            for p in products:
+                if len(seen_card_ids) >= _MAX_PRODUCT_CARDS:
+                    break
+                if p["id"] in seen_card_ids:
+                    continue
+                seen_card_ids.add(p["id"])
                 components.append({"component": "product_card", "props": _product_card_props(p)})
+                n_search_cards += 1
             for p in cross_sell:
+                if len(seen_card_ids) >= _MAX_PRODUCT_CARDS:
+                    break
+                if p["id"] in seen_card_ids:
+                    continue
+                seen_card_ids.add(p["id"])
                 components.append({"component": "product_card", "props": _product_card_props(p, recommended=True)})
+                n_rec_cards += 1
 
             responses.append(ToolMessage(content=db_text, tool_call_id=call["id"], name=name))
             new_entries.append({
                 "agent": "Sales Agent",
-                "detail": f"🛠️ Tool Call: search_store_catalog('{query[:20]}') → found {len(products)} item(s)",
+                "detail": f"Tool Call: search_store_catalog('{query[:20]}') → found {len(products)} item(s)",
             })
             if products:
                 new_entries.append({
                     "agent": "Sales Agent",
                     "detail": (
-                        f"🎨 Gen UI: streamed {min(len(products), 3) + len(cross_sell)} product card(s)"
-                        + (f" (+{len(cross_sell)} recommended)" if cross_sell else "")
+                        f"Gen UI: streamed {n_search_cards + n_rec_cards} product card(s)"
+                        + (f" (+{n_rec_cards} recommended)" if n_rec_cards else "")
                     ),
                 })
             
@@ -556,7 +592,7 @@ async def sales_tools_node(state: AgentState) -> dict:
             responses.append(ToolMessage(content=msg, tool_call_id=call["id"], name=name))
             new_entries.append({
                 "agent": "Sales Agent",
-                "detail": f"🛠️ Tool Call: add_to_cart('{product_id}', {qty}) → {'Success' if success else 'Failed'}",
+                "detail": f"Tool Call: add_to_cart('{product_id}', {qty}) → {'Success' if success else 'Failed'}",
             })
 
         elif name == "view_cart":
@@ -573,7 +609,7 @@ async def sales_tools_node(state: AgentState) -> dict:
             responses.append(ToolMessage(content=msg, tool_call_id=call["id"], name=name))
             new_entries.append({
                 "agent": "Sales Agent",
-                "detail": f"🛠️ Tool Call: view_cart() → {len(cart_items)} item(s)",
+                "detail": f"Tool Call: view_cart() → {len(cart_items)} item(s)",
             })
 
         elif name == "clear_cart":
@@ -581,7 +617,7 @@ async def sales_tools_node(state: AgentState) -> dict:
             responses.append(ToolMessage(content="Cart cleared.", tool_call_id=call["id"], name=name))
             new_entries.append({
                 "agent": "Sales Agent",
-                "detail": "🛠️ Tool Call: clear_cart() → cart emptied",
+                "detail": "Tool Call: clear_cart() → cart emptied",
             })
 
         elif name == "render_custom_ui":
@@ -607,7 +643,7 @@ async def sales_tools_node(state: AgentState) -> dict:
             ))
             new_entries.append({
                 "agent": "Sales Agent",
-                "detail": f"🎨 Gen UI: render_custom_ui('{title[:24]}')",
+                "detail": f"Gen UI: render_custom_ui('{title[:24]}')",
             })
 
     return {
@@ -652,9 +688,11 @@ async def billing_agent_node(state: AgentState) -> dict:
             "detail": f"Razorpay API: payment link {link['id']} → {link['short_url']} (₹{total_amount:,})",
         })
 
-    # Gen UI: stream a grounded checkout widget (cart + Razorpay offers + payment link)
+    # Gen UI: stream a grounded checkout widget (cart + Razorpay offers + payment link),
+    # but only when the customer FIRST enters checkout — re-rendering the full widget on
+    # every payment-mode follow-up spams the chat.
     components: list[dict] = []
-    if cart_items:
+    if cart_items and state.get("just_entered_checkout", True):
         ceiling = state.get("discount_ceiling", _HARD_POLICY_MAX_DISCOUNT_PCT)
         components.append({
             "component": "checkout_widget",
@@ -662,7 +700,7 @@ async def billing_agent_node(state: AgentState) -> dict:
         })
         new_entries.append({
             "agent":  "Billing Agent",
-            "detail": f"🎨 Gen UI: streamed checkout widget (₹{total_amount:,}, {len(offers)} offer(s))",
+            "detail": f"Gen UI: streamed checkout widget (₹{total_amount:,}, {len(offers)} offer(s))",
         })
 
     prompt   = _billing_system_prompt(state, cart_items, offers_text, payment_link_text)
