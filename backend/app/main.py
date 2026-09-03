@@ -299,3 +299,66 @@ async def health():
         "service":    "razorpay-saathi-backend",
         "llm_config": active_config(),
     }
+
+
+# ── Marketing / Campaign routes ───────────────────────────────────────────────
+
+from app.graph import run_marketing_campaign
+from app import db as _db
+
+class CampaignRequest(BaseModel):
+    product_id:   str
+    trigger_type: str  = "stagnant_inventory"   # | "cart_abandonment"
+    discount_pct: float = 12.0                  # requested — Manager may cap it
+    session_id:   str  = ""
+
+
+@app.post("/api/campaign")
+async def trigger_campaign(req: CampaignRequest):
+    """
+    Manager-gated: caps discount at the hard policy ceiling before firing the
+    Marketing Agent. Returns the full CampaignResult JSON.
+    """
+    from app.graph import _HARD_POLICY_MAX_DISCOUNT_PCT
+
+    # Manager inline policy check (mirrors manager_audit guardrail logic)
+    if req.discount_pct > _HARD_POLICY_MAX_DISCOUNT_PCT:
+        manager_note = (
+            f"Manager capped requested {req.discount_pct}% down to "
+            f"{_HARD_POLICY_MAX_DISCOUNT_PCT}% (hard policy ceiling)."
+        )
+        approved_discount = _HARD_POLICY_MAX_DISCOUNT_PCT
+    else:
+        approved_discount = req.discount_pct
+        manager_note = f"Manager approved {approved_discount}% discount for {req.trigger_type} campaign."
+
+    result = await run_marketing_campaign(
+        product_id=req.product_id,
+        trigger_type=req.trigger_type,
+        approved_discount_pct=approved_discount,
+        session_id=req.session_id,
+        manager_note=manager_note,
+    )
+    return result
+
+
+@app.get("/api/campaigns")
+async def get_campaign_history(limit: int = 20):
+    """Return the campaign execution history log."""
+    return {"campaigns": _db.get_campaigns(limit=limit)}
+
+
+@app.get("/api/stagnant")
+async def get_stagnant():
+    """Return products with stagnant inventory (stock ≤ 5)."""
+    return {"products": _db.get_stagnant_products(threshold=5)}
+
+
+@app.post("/api/mark_stagnant/{product_id}")
+async def mark_stagnant(product_id: str, stock: int = 3):
+    """
+    Demo helper: sets a product's stock to `stock` to simulate stagnant inventory.
+    Call this before /api/campaign to set up the stagnant-inventory demo flow.
+    """
+    ok = _db.mark_stagnant(product_id, stock=stock)
+    return {"success": ok, "product_id": product_id, "new_stock": stock}

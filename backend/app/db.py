@@ -61,6 +61,19 @@ CREATE TABLE IF NOT EXISTS carts (
     qty        INTEGER DEFAULT 1,
     PRIMARY KEY (session_id, product_id)
 );
+
+CREATE TABLE IF NOT EXISTS campaigns (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at   TEXT    DEFAULT (datetime('now')),
+    trigger_type TEXT    NOT NULL,     -- 'stagnant_inventory' | 'cart_abandonment'
+    product_id   TEXT    NOT NULL,
+    discount_pct REAL    NOT NULL,
+    tweet_copy   TEXT,
+    payment_link TEXT,                 -- short_url from Razorpay
+    link_id      TEXT,                 -- plink_... id
+    session_id   TEXT,                 -- set for cart-abandonment campaigns
+    manager_note TEXT                  -- why Manager approved this discount
+);
 """
 
 # ── Seed data: The Souled Store Sneakers ───────────────────────────────────────
@@ -496,3 +509,75 @@ def format_offers_for_prompt(offers: list[dict]) -> str:
                 f"on orders ≥ ₹{o['min_order_inr']:,} [Code: {o['offer_code']}]"
             )
     return "\n".join(lines)
+
+
+# ── Marketing / Campaign helpers ──────────────────────────────────────────────
+
+def mark_stagnant(product_id: str, stock: int = 3) -> bool:
+    """
+    Simulate stagnant inventory by dropping a product's stock count to a low
+    number. The Manager monitors products with stock < 5 to trigger campaigns.
+    """
+    with _conn() as db:
+        rows_affected = db.execute(
+            "UPDATE products SET stock = ? WHERE id = ?", (stock, product_id)
+        ).rowcount
+    return rows_affected > 0
+
+
+def get_stagnant_products(threshold: int = 5) -> list[dict]:
+    """Return products whose stock is below the stagnant threshold."""
+    with _conn() as db:
+        rows = db.execute(
+            "SELECT * FROM products WHERE stock > 0 AND stock <= ? ORDER BY stock ASC",
+            (threshold,),
+        ).fetchall()
+    return [_parse_product(dict(r)) for r in rows]
+
+
+def log_campaign(
+    trigger_type: str,
+    product_id: str,
+    discount_pct: float,
+    tweet_copy: str,
+    payment_link: str,
+    link_id: str,
+    session_id: str = "",
+    manager_note: str = "",
+) -> int:
+    """Persist a campaign execution to the campaigns table. Returns new row id."""
+    with _conn() as db:
+        cur = db.execute(
+            """INSERT INTO campaigns
+               (trigger_type, product_id, discount_pct, tweet_copy, payment_link, link_id, session_id, manager_note)
+               VALUES (?,?,?,?,?,?,?,?)""",
+            (trigger_type, product_id, discount_pct, tweet_copy, payment_link, link_id, session_id, manager_note),
+        )
+        return cur.lastrowid
+
+
+def get_campaigns(limit: int = 20) -> list[dict]:
+    """Return the most recent campaigns, newest first."""
+    with _conn() as db:
+        rows = db.execute(
+            "SELECT * FROM campaigns ORDER BY id DESC LIMIT ?", (limit,)
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_abandoned_carts(max_results: int = 10) -> list[dict]:
+    """
+    Return sessions that have items in their cart but have not converted
+    (i.e., they are in the 'carts' table). Used for cart-abandonment campaigns.
+    """
+    with _conn() as db:
+        rows = db.execute(
+            """SELECT c.session_id, GROUP_CONCAT(p.name, ', ') AS products,
+                      SUM(p.price_inr * c.qty) AS cart_total
+               FROM carts c
+               JOIN products p ON p.id = c.product_id
+               GROUP BY c.session_id
+               LIMIT ?""",
+            (max_results,),
+        ).fetchall()
+    return [dict(r) for r in rows]

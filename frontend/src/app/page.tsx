@@ -560,6 +560,71 @@ function CuratedSelectionCarousel({
   );
 }
 
+// ── Campaign Result Card ────────────────────────────────────────────────────
+interface CampaignResult {
+  campaign_id: number;
+  trigger_type: string;
+  product: { id: string; name: string; brand: string; image: string; original_price: number; campaign_price: number };
+  discount_pct: number;
+  tweet: string;
+  headline: string;
+  body: string;
+  payment_link: string;
+  link_id: string;
+  manager_note: string;
+  audit: { agent: string; detail: string }[];
+}
+
+function CampaignResultCard({ result, onDismiss }: { result: CampaignResult; onDismiss: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const copyTweet = () => {
+    navigator.clipboard.writeText(result.tweet).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+  };
+
+  return (
+    <div className="campaign-result-card">
+      <div className="campaign-card-header">
+        <div className="campaign-trigger-badge">{result.trigger_type === "stagnant_inventory" ? "Stagnant Inventory" : "Cart Abandonment"}</div>
+        <button className="campaign-dismiss-btn" onClick={onDismiss}>✕</button>
+      </div>
+
+      <div className="campaign-product-row">
+        {result.product.image && <img src={result.product.image} alt={result.product.name} className="campaign-product-img" />}
+        <div>
+          <div className="campaign-product-name">{result.product.name}</div>
+          <div className="campaign-price-row">
+            <span className="campaign-price-original">₹{result.product.original_price.toLocaleString("en-IN")}</span>
+            <span className="campaign-price-arrow">→</span>
+            <span className="campaign-price-new">₹{result.product.campaign_price.toLocaleString("en-IN")}</span>
+            <span className="campaign-discount-badge">{result.discount_pct}% off</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="campaign-copy-section">
+        <div className="campaign-copy-label">Generated Tweet</div>
+        <div className="campaign-tweet-box">{result.tweet}</div>
+        <button className="campaign-copy-btn" onClick={copyTweet}>{copied ? "Copied!" : "Copy Tweet"}</button>
+      </div>
+
+      <a href={result.payment_link} target="_blank" rel="noopener noreferrer" className="campaign-pay-link">
+        Razorpay Link — {result.link_id}
+      </a>
+
+      <div className="campaign-manager-note">{result.manager_note}</div>
+
+      <div className="campaign-audit-trail">
+        {result.audit.map((a, i) => (
+          <div key={i} className="campaign-audit-row">
+            <span className="campaign-audit-agent">{a.agent}</span>
+            <span className="campaign-audit-detail">{a.detail}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Component Main Page ───────────────────────────────────────────────────────
 export default function Home() {
   const [mode, setMode] = useState<"classic" | "agent">("classic");
@@ -575,6 +640,31 @@ export default function Home() {
   const [cartOpen, setCartOpen] = useState(false);
   const [couponInput, setCouponInput] = useState("");
   const [toast, setToast] = useState<string | null>(null);
+
+  // Campaign state
+  const [campaignResults, setCampaignResults] = useState<CampaignResult[]>([]);
+  const [campaignLoading, setCampaignLoading] = useState<string | null>(null); // product_id being triggered
+
+  const triggerCampaign = async (productId: string, triggerType: string = "stagnant_inventory") => {
+    setCampaignLoading(productId);
+    try {
+      // Simulate stagnant inventory first
+      await fetch(`http://localhost:8000/api/mark_stagnant/${productId}`, { method: "POST" });
+      const res = await fetch("http://localhost:8000/api/campaign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product_id: productId, trigger_type: triggerType, discount_pct: 12.0 }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const result: CampaignResult = await res.json();
+      setCampaignResults((prev) => [result, ...prev]);
+      showToastMsg(`Campaign generated for ${result.product.name}`);
+    } catch (err) {
+      showToastMsg("Campaign trigger failed — backend offline?");
+    } finally {
+      setCampaignLoading(null);
+    }
+  };
 
   // Product detail modal (for classic store cards)
   const [activeProduct, setActiveProduct] = useState<Product | null>(null);
@@ -903,6 +993,45 @@ export default function Home() {
                 Checkout Cart
               </button>
             </div>
+
+            {/* Manager Actions: Campaign Trigger Panel */}
+            <div className="panel-card campaign-panel">
+              <h3 className="panel-card-title">
+                <span className="manager-icon">🎯</span> Manager Actions
+              </h3>
+              <p className="campaign-panel-desc">Trigger an AI-generated promo campaign with a Razorpay Payment Link.</p>
+              <div className="campaign-product-triggers">
+                {PRODUCTS.map((p) => (
+                  <button
+                    key={p.id}
+                    className={`campaign-trigger-btn ${campaignLoading === p.id ? "loading" : ""}`}
+                    disabled={campaignLoading !== null}
+                    onClick={() => triggerCampaign(p.id)}
+                  >
+                    {campaignLoading === p.id ? (
+                      <span className="campaign-spinner" />
+                    ) : (
+                      <span className="campaign-trigger-icon">⚡</span>
+                    )}
+                    <span className="campaign-trigger-label">{p.title}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Campaign Results */}
+            {campaignResults.length > 0 && (
+              <div className="campaign-results-feed">
+                <h3 className="panel-card-title" style={{ padding: "0 0 0.5rem 0" }}>Campaign Results</h3>
+                {campaignResults.map((r) => (
+                  <CampaignResultCard
+                    key={r.campaign_id}
+                    result={r}
+                    onDismiss={() => setCampaignResults((prev) => prev.filter((c) => c.campaign_id !== r.campaign_id))}
+                  />
+                ))}
+              </div>
+            )}
           </aside>
         </div>
       )}
