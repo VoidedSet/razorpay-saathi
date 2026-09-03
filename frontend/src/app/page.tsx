@@ -258,7 +258,7 @@ function useAgentChat() {
     const auditEvents: AuditEvent[] = [
       { type: "audit", agent: "Manager Agent", detail: "DB Lookup: Profile [Alex] (Gold) | Store margin: 16.0% | Discount ceiling: 10.0%", ms: 1 },
       { type: "audit", agent: "Manager Agent", detail: "Guardrail: OK | Routing to Sales Agent", ms: 4 },
-      { type: "audit", agent: "Sales Agent", detail: "LLM [agent] → llama-3.3-70b-versatile", model: "llama-3.3-70b-versatile" },
+      { type: "audit", agent: "Sales Agent", detail: "LLM [agent] → qwen/qwen3.6-27b", model: "qwen/qwen3.6-27b" },
       { type: "audit", agent: "Manager Agent", detail: "AUDIT: products & pricing verified against catalog – no violations", ms: 1 },
     ];
     if (lower.includes("miami") || lower.includes("souled")) {

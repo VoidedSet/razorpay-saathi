@@ -504,9 +504,11 @@ async def sales_agent_node(state: AgentState) -> dict:
     # Keep only the last 8 messages to save tokens for Groq limits
     messages = [SystemMessage(content=prompt)] + list(state["messages"])[-8:]
     response = await llm.ainvoke(messages)
+    if hasattr(response, "content") and response.content:
+        response.content = _strip_think(response.content)
     
     new_entries = []
-    if not response.tool_calls:
+    if not hasattr(response, "tool_calls") or not response.tool_calls:
         new_entries.append({
             "agent":  AGENT_LABELS["sales_agent"],
             "detail": f"Response generated ({len(response.content)} chars)",
@@ -708,6 +710,8 @@ async def billing_agent_node(state: AgentState) -> dict:
     # Keep context small — billing agent only needs the last few turns, not the full history
     messages = [SystemMessage(content=prompt)] + list(state["messages"])[-6:]
     response = await llm.ainvoke(messages)
+    if hasattr(response, "content") and response.content:
+        response.content = _strip_think(response.content)
 
     return {
         "messages":  [response],
@@ -724,6 +728,8 @@ async def support_agent_node(state: AgentState) -> dict:
     llm      = get_llm()
     messages = [SystemMessage(content=prompt)] + list(state["messages"])
     response = await llm.ainvoke(messages)
+    if hasattr(response, "content") and response.content:
+        response.content = _strip_think(response.content)
     return {
         "messages":  [response],
         "audit_log": state.get("audit_log", []) + [{

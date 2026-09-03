@@ -239,6 +239,11 @@ def _conn() -> sqlite3.Connection:
 def init_db(force_reseed: bool = True) -> None:
     """Create tables and seed with mock data."""
     with _conn() as db:
+        if force_reseed:
+            db.execute("DROP TABLE IF EXISTS products")
+            db.execute("DROP TABLE IF EXISTS users")
+            db.execute("DROP TABLE IF EXISTS balance_sheet")
+            db.execute("DROP TABLE IF EXISTS carts")
         db.executescript(_SCHEMA)
         if force_reseed or db.execute("SELECT COUNT(*) FROM products").fetchone()[0] == 0:
             db.execute("DELETE FROM products")
