@@ -928,6 +928,383 @@ html, body {
   box-shadow: var(--shadow-lg);
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   Generative UI — components streamed by the backend into the chat feed.
+   Renderers live in genui.tsx; these styles reuse the warm/light theme tokens.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Let a message carrying Gen UI breathe wider than a plain text bubble. */
+.chat-msg-wrapper.has-genui {
+  max-width: 96%;
+  width: 100%;
+}
+
+.genui-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin-top: 0.6rem;
+}
+
+/* Product cards laid out as a horizontally scrollable strip (carousel). */
+.genui-strip {
+  display: flex;
+  gap: 0.9rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  scroll-snap-type: x mandatory;
+}
+
+.genui-strip::-webkit-scrollbar {
+  height: 6px;
+}
+
+.genui-strip::-webkit-scrollbar-thumb {
+  background: var(--border-warm);
+  border-radius: 3px;
+}
+
+.genui-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-warm);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.genui-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* ── Product card ── */
+.genui-product {
+  position: relative;
+  flex: 0 0 210px;
+  width: 210px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  scroll-snap-align: start;
+}
+
+.genui-product.is-recommended {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 2px var(--teal-glow);
+}
+
+.genui-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  background: var(--teal);
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  letter-spacing: 0.02em;
+}
+
+.genui-product-media {
+  height: 120px;
+  background: #fffbf0;
+  border-bottom: 1px solid var(--border-warm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.genui-product-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.genui-emoji {
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.genui-product-body {
+  padding: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 0.35rem;
+}
+
+.genui-product-brand {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+}
+
+.genui-product-name {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.25;
+}
+
+.genui-product-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.genui-spec-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0.15rem 0;
+}
+
+.genui-spec-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.genui-spec-key {
+  color: var(--text-muted);
+}
+
+.genui-spec-val {
+  color: var(--text-primary);
+  font-weight: 600;
+  text-align: right;
+}
+
+.genui-product-footer {
+  margin-top: auto;
+  padding-top: 0.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.genui-btn {
+  background: var(--teal);
+  color: #ffffff;
+  border: 1px solid var(--teal-dark);
+  padding: 0.45rem 0.85rem;
+  border-radius: 6px;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  white-space: nowrap;
+}
+
+.genui-btn:hover {
+  background: var(--teal-dark);
+}
+
+/* ── Checkout widget ── */
+.genui-checkout {
+  padding: 1.1rem 1.2rem;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.genui-checkout-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--border-warm);
+}
+
+.genui-checkout-title {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.genui-ceiling {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--amber);
+  background: var(--amber-light);
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.genui-checkout-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.genui-checkout-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+}
+
+.genui-muted {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.genui-mono {
+  font-family: var(--font-code);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.genui-checkout-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--border-warm);
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.genui-offers {
+  background: var(--bg-color);
+  border: 1px solid var(--border-warm);
+  border-radius: 8px;
+  padding: 0.7rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.genui-offers-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-secondary);
+}
+
+.genui-offer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+}
+
+.genui-offer-code {
+  font-family: var(--font-code);
+  font-size: 0.74rem;
+  background: var(--teal-light);
+  color: var(--teal-dark);
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.genui-pay-btn {
+  display: block;
+  width: 100%;
+  text-align: center;
+  text-decoration: none;
+  background: var(--teal);
+  color: #ffffff;
+  border: none;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.genui-pay-btn:hover {
+  background: var(--teal-dark);
+}
+
+.genui-pay-btn:disabled {
+  background: #e5e7eb;
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.genui-plink-id {
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ── Custom / fallback card ── */
+.genui-custom {
+  padding: 1.1rem 1.2rem;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  border-left: 3px solid var(--amber);
+}
+
+.genui-custom-title {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.genui-custom-body {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.genui-custom-bullets {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.genui-custom-bullets li {
+  position: relative;
+  padding-left: 1.1rem;
+  font-size: 0.86rem;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.genui-custom-bullets li::before {
+  content: "▸";
+  position: absolute;
+  left: 0;
+  color: var(--teal);
+  font-weight: 700;
+}
+
+.genui-custom .genui-btn {
+  align-self: flex-start;
+}
+
 @media (max-width: 800px) {
   .agent-chat-layout {
     grid-template-columns: 1fr;

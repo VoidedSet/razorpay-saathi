@@ -53,6 +53,7 @@ class AgentState(TypedDict):
     client_type:       str        # "human" | "agent"
     agent_profile:     dict       # A2A: {name, preferences, budget, currency}
     manager_correction: str       # user-visible Manager override, set by audit when a response is dirty
+    ui_components:      list[dict] # generative-UI components streamed to the frontend registry
 
 
 # ── Phase detection (pure function — no LLM) ──────────────────────────────────
@@ -229,6 +230,85 @@ AGENT_LABELS = {
 }
 
 
+# ── Generative UI: component palette ──────────────────────────────────────────
+# The frontend holds a registry of predefined components keyed by these names.
+# Agents "fill in the values" but the SERVER grounds every authoritative field
+# (id / price / total / payment link) from the DB, so numbers can't be
+# hallucinated. `custom` is the escape hatch: an agent authors it via the
+# render_custom_ui tool when nothing predefined fits.
+
+_CATEGORY_EMOJI = {
+    "smartphone": "📱", "laptop": "💻", "earbuds": "🎧", "charger": "🔌",
+    "powerbank": "🔋", "case": "🛡️", "screen-protector": "🛡️", "tablet": "📲",
+    "watch": "⌚", "sneakers": "👟", "shoes": "👟",
+}
+
+
+def _product_card_props(product: dict, recommended: bool = False) -> dict:
+    """Grounded `product_card` props from a DB product row (all values from the DB)."""
+    specs = product.get("specs") or {}
+    # A few display-friendly specs (skip booleans like {"5g": true}).
+    spec_items = [
+        {"label": str(k), "value": str(v)}
+        for k, v in list(specs.items())
+        if not isinstance(v, bool)
+    ][:3]
+    return {
+        "id":          product["id"],
+        "name":        product["name"],
+        "brand":       product.get("brand", ""),
+        "category":    product.get("category", ""),
+        "price":       product["price_inr"],
+        "currency":    "INR",
+        "image":       product.get("image_url") or "",   # no image column yet → emoji fallback
+        "emoji":       _CATEGORY_EMOJI.get(product.get("category", ""), "🛍️"),
+        "description": product.get("description", ""),
+        "stock":       product.get("stock", 0),
+        "specs":       spec_items,
+        "recommended": recommended,
+    }
+
+
+def _checkout_widget_props(cart_items: list[dict], total: int, offers: list[dict],
+                           payment_link: dict | None, ceiling: float) -> dict:
+    """Grounded `checkout_widget` props (cart + Razorpay offers + payment link)."""
+    items = [{
+        "id":    i["id"],
+        "name":  i["name"],
+        "qty":   i.get("qty", 1),
+        "price": i.get("price_inr", i.get("price", 0)),
+        "emoji": _CATEGORY_EMOJI.get(i.get("category", ""), "🛍️"),
+    } for i in cart_items]
+
+    offer_rows = []
+    for o in offers:
+        if o["type"] == "cashback":
+            label = f"{o['bank']}: {o['discount_pct']}% cashback (max ₹{o['max_discount_inr']:,})"
+        elif o["type"] == "instant_discount":
+            label = f"{o['bank']}: ₹{o['discount_flat_inr']:,} instant off"
+        elif o["type"] == "emi_cashback":
+            label = f"{o['bank']}: {o['discount_pct']}% EMI cashback (max ₹{o['max_discount_inr']:,})"
+        else:
+            label = o.get("bank", "Bank offer")
+        offer_rows.append({
+            "label":  label,
+            "code":   o.get("offer_code", ""),
+            "method": o.get("payment_method", ""),
+        })
+
+    return {
+        "items":    items,
+        "total":    total,
+        "currency": "INR",
+        "offers":   offer_rows,
+        "payment_link": (
+            {"url": payment_link.get("short_url", ""), "id": payment_link.get("id", "")}
+            if payment_link else None
+        ),
+        "ceiling":  ceiling,
+    }
+
+
 # ── Nodes ─────────────────────────────────────────────────────────────────────
 
 async def manager_init_node(state: AgentState) -> dict:
@@ -380,7 +460,16 @@ def _sales_tools():
     def clear_cart():
         """Removes all items from the user's cart."""
         pass
-    return [search_store_catalog, add_to_cart, view_cart, clear_cart]
+    def render_custom_ui(title: str, body: str = "", bullets: str = "",
+                         cta_label: str = "", cta_message: str = ""):
+        """Render a CUSTOM generative-UI card in the chat when NO standard component fits.
+        Standard components are the product cards (shown automatically when you search) and
+        the checkout widget. Use this for things like a short comparison, a summary, or a
+        promo note. `bullets` is a newline-separated list. `cta_label` + `cta_message`
+        optionally add a button that sends `cta_message` as the customer's next chat message.
+        Do NOT use this to quote prices or invent products — product cards carry verified pricing."""
+        pass
+    return [search_store_catalog, add_to_cart, view_cart, clear_cart, render_custom_ui]
 
 async def sales_agent_node(state: AgentState) -> dict:
     """
@@ -417,6 +506,7 @@ async def sales_tools_node(state: AgentState) -> dict:
     last_msg = state["messages"][-1]
     responses = []
     new_entries = []
+    components: list[dict] = []
     session_id = state.get("session_id", "default")
     
     for call in last_msg.tool_calls:
@@ -427,17 +517,32 @@ async def sales_tools_node(state: AgentState) -> dict:
             query = args.get("query", "")
             products = db.search_products(query, limit=4)
             db_text  = db.format_products_for_prompt(products)
-            
+
+            cross_sell = []
             if products:
                 cross_sell = db.get_related_products(products[0]["id"], limit=3)
                 if cross_sell:
                     db_text += f"\n\nRECOMMENDED CROSS-SELL / ACCESSORIES:\n{db.format_products_for_prompt(cross_sell)}"
-            
+
+            # Gen UI: stream grounded product cards (top search hits + cross-sell picks)
+            for p in products[:3]:
+                components.append({"component": "product_card", "props": _product_card_props(p)})
+            for p in cross_sell:
+                components.append({"component": "product_card", "props": _product_card_props(p, recommended=True)})
+
             responses.append(ToolMessage(content=db_text, tool_call_id=call["id"], name=name))
             new_entries.append({
                 "agent": "Sales Agent",
                 "detail": f"🛠️ Tool Call: search_store_catalog('{query[:20]}') → found {len(products)} item(s)",
             })
+            if products:
+                new_entries.append({
+                    "agent": "Sales Agent",
+                    "detail": (
+                        f"🎨 Gen UI: streamed {min(len(products), 3) + len(cross_sell)} product card(s)"
+                        + (f" (+{len(cross_sell)} recommended)" if cross_sell else "")
+                    ),
+                })
             
         elif name == "add_to_cart":
             product_id = args.get("product_id", "")
@@ -479,9 +584,36 @@ async def sales_tools_node(state: AgentState) -> dict:
                 "detail": "🛠️ Tool Call: clear_cart() → cart emptied",
             })
 
+        elif name == "render_custom_ui":
+            title       = args.get("title", "") or "Details"
+            body        = args.get("body", "")
+            bullets_raw = args.get("bullets", "") or ""
+            bullets     = [b.strip(" -•\t") for b in bullets_raw.split("\n") if b.strip()]
+            cta_label   = args.get("cta_label", "")
+            cta_message = args.get("cta_message", "")
+            components.append({
+                "component": "custom",
+                "props": {
+                    "title":   title,
+                    "body":    body,
+                    "bullets": bullets,
+                    "cta":     ({"label": cta_label, "message": cta_message or cta_label}
+                                if cta_label else None),
+                },
+            })
+            responses.append(ToolMessage(
+                content=f"Custom UI card '{title}' rendered to the customer.",
+                tool_call_id=call["id"], name=name,
+            ))
+            new_entries.append({
+                "agent": "Sales Agent",
+                "detail": f"🎨 Gen UI: render_custom_ui('{title[:24]}')",
+            })
+
     return {
         "messages": responses,
         "audit_log": state.get("audit_log", []) + new_entries,
+        "ui_components": state.get("ui_components", []) + components,
     }
 
 
@@ -511,12 +643,26 @@ async def billing_agent_node(state: AgentState) -> dict:
 
     # Generate a Razorpay Payment Link for the confirmed total (mocked in db.py)
     payment_link_text = ""
+    link = None
     if total_amount > 0:
         link = db.get_payment_link(session_id, total_amount)
         payment_link_text = db.format_payment_link_for_prompt(link)
         new_entries.append({
             "agent":  "Billing Agent",
             "detail": f"Razorpay API: payment link {link['id']} → {link['short_url']} (₹{total_amount:,})",
+        })
+
+    # Gen UI: stream a grounded checkout widget (cart + Razorpay offers + payment link)
+    components: list[dict] = []
+    if cart_items:
+        ceiling = state.get("discount_ceiling", _HARD_POLICY_MAX_DISCOUNT_PCT)
+        components.append({
+            "component": "checkout_widget",
+            "props": _checkout_widget_props(cart_items, total_amount, offers, link, ceiling),
+        })
+        new_entries.append({
+            "agent":  "Billing Agent",
+            "detail": f"🎨 Gen UI: streamed checkout widget (₹{total_amount:,}, {len(offers)} offer(s))",
         })
 
     prompt   = _billing_system_prompt(state, cart_items, offers_text, payment_link_text)
@@ -530,6 +676,7 @@ async def billing_agent_node(state: AgentState) -> dict:
             "agent":  AGENT_LABELS["billing_agent"],
             "detail": f"Response generated ({len(response.content)} chars)",
         }],
+        "ui_components": state.get("ui_components", []) + components,
     }
 
 

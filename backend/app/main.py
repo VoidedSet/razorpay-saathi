@@ -7,6 +7,7 @@ SSE event protocol (JSON on each `data:` line):
   { "type": "audit",      "agent": "Manager Agent", "detail": "...", "model": "...", "ms": 230 }
   { "type": "token",      "content": "Hello " }
   { "type": "correction", "message": "🔒 Manager policy override: ..." }  ← Manager overrode the response
+  { "type": "component",  "component": "product_card", "props": {...} }  ← generative-UI card streamed to the registry
   { "type": "error",      "message": "..." }
   { "type": "done",       "session_phase": "checkout" }   ← client persists this
 """
@@ -85,6 +86,7 @@ async def langgraph_stream(req: ChatRequest):
         "client_type":      req.client_type,
         "agent_profile":    req.agent_profile,
         "manager_correction": "",  # set by manager_audit when a response is overridden
+        "ui_components":    [],     # generative-UI components streamed to the frontend registry
     }
 
     def _sse(payload: dict) -> str:
@@ -95,6 +97,7 @@ async def langgraph_stream(req: ChatRequest):
     node_models:       dict         = {}
     final_phase:       str          = req.session_phase
     last_audit_count:  int          = 0   # track which audit entries are new
+    last_component_count: int       = 0   # track which ui_components are new
 
     try:
         async for event in _graph.astream_events(initial_state, version="v2"):
@@ -168,6 +171,19 @@ async def langgraph_stream(req: ChatRequest):
                         "type":    "correction",
                         "message": output["manager_correction"],
                     })
+
+                # ── Generative UI components (grounded or agent-authored) ──────────
+                # Guard on key presence: only nodes that actually return ui_components
+                # advance the counter, so we never re-emit or reset on other nodes.
+                if "ui_components" in output:
+                    full_components = output.get("ui_components") or []
+                    for comp in full_components[last_component_count:]:
+                        yield _sse({
+                            "type":      "component",
+                            "component": comp.get("component", ""),
+                            "props":     comp.get("props", {}),
+                        })
+                    last_component_count = len(full_components)
 
                 current_node = None
 
