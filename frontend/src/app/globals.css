@@ -46,10 +46,35 @@ html, body {
   border-bottom: 1px solid var(--border);
   background: var(--surface);
   flex-shrink: 0;
+  flex-wrap: wrap;
 }
 .chat-logo { font-size: 22px; }
 .chat-title { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
-.chat-subtitle { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+.chat-subtitle { font-size: 12px; color: var(--text-muted); }
+
+/* Active model info displayed in header */
+.header-model-info {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--audit-bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3px 10px;
+}
+.header-model-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.header-model-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-hover);
+  font-family: monospace;
+}
 
 /* ── Messages ── */
 .chat-messages {
@@ -100,13 +125,25 @@ html, body {
   border: none;
   cursor: pointer;
   color: var(--text-muted);
-  font-size: 12px;
-  padding: 2px 0;
+  font-size: 11px;
+  padding: 3px 0;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  width: 100%;
 }
 .audit-toggle:hover { color: var(--text); }
+.audit-summary {
+  font-weight: 500;
+  color: var(--text-muted);
+  flex: 1;
+  text-align: left;
+}
+.audit-step-count {
+  font-size: 10px;
+  color: var(--border);
+}
+
 .audit-list {
   list-style: none;
   margin-top: 6px;
@@ -116,16 +153,57 @@ html, body {
   padding: 8px 10px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
 }
-.audit-item { display: flex; gap: 8px; align-items: baseline; }
+.audit-item {
+  display: grid;
+  grid-template-columns: 110px 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
 .audit-agent {
   font-weight: 600;
   color: var(--accent-hover);
-  white-space: nowrap;
   font-size: 11px;
+  white-space: nowrap;
 }
-.audit-detail { color: var(--text-muted); font-size: 12px; }
+.audit-detail {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-family: monospace;
+  word-break: break-all;
+}
+.audit-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Model badge — purple pill */
+.audit-model-badge {
+  background: #2d1f5e;
+  color: #a78bfa;
+  border: 1px solid #4c1d95;
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: monospace;
+  padding: 1px 5px;
+  white-space: nowrap;
+}
+
+/* Timing chip — green */
+.audit-timing {
+  background: #0f2a1a;
+  color: #34d399;
+  border: 1px solid #065f46;
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: monospace;
+  padding: 1px 5px;
+  white-space: nowrap;
+}
+
 
 /* ── Input form ── */
 .chat-form {

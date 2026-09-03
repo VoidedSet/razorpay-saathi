@@ -7,6 +7,8 @@ interface AuditEvent {
   type: "audit";
   agent: string;
   detail: string;
+  model?: string | null;   // LLM model name used at this step
+  ms?: number | null;      // wall-clock milliseconds for this node
 }
 
 interface TokenEvent {
@@ -122,13 +124,63 @@ function useAgentChat() {
 }
 
 // ── Components ────────────────────────────────────────────────────────────────
+
+/** Fetches /health once and shows the active model config in the header. */
+function ActiveModelBadge() {
+  const [cfg, setCfg] = useState<{ provider: string; model: string; routing_model: string } | null>(null);
+
+  useEffect(() => {
+    fetch("http://localhost:8000/health")
+      .then((r) => r.json())
+      .then((d) => setCfg(d.llm_config))
+      .catch(() => {});
+  }, []);
+
+  if (!cfg) return null;
+  const sameModel = cfg.model === cfg.routing_model;
+  return (
+    <div className="header-model-info">
+      <span className="header-model-label">agent</span>
+      <span className="header-model-name">{cfg.model}</span>
+      {!sameModel && (
+        <>
+          <span className="header-model-label">router</span>
+          <span className="header-model-name">{cfg.routing_model}</span>
+        </>
+      )}
+    </div>
+  );
+}
+
+function ModelBadge({ model }: { model?: string | null }) {
+  if (!model) return null;
+  // Shorten long model names for display
+  const short = model.length > 22 ? model.slice(0, 20) + "…" : model;
+  return <span className="audit-model-badge" title={model}>{short}</span>;
+}
+
+function TimingChip({ ms }: { ms?: number | null }) {
+  if (!ms) return null;
+  const label = ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${ms}ms`;
+  return <span className="audit-timing">{label}</span>;
+}
+
 function AuditAccordion({ log }: { log: AuditEvent[] }) {
   const [open, setOpen] = useState(false);
   if (log.length === 0) return null;
+
+  // Summarise: unique agents + last timing
+  const lastMs = [...log].reverse().find((e) => e.ms)?.ms;
+  const agents = [...new Set(log.map((e) => e.agent))];
+  const summary = agents.join(" → ");
+
   return (
     <div className="audit-accordion">
       <button onClick={() => setOpen((o) => !o)} className="audit-toggle">
-        {open ? "▲" : "▼"} Agent Activity ({log.length} steps)
+        <span>{open ? "▲" : "▼"}</span>
+        <span className="audit-summary">{summary}</span>
+        {lastMs && <TimingChip ms={lastMs} />}
+        <span className="audit-step-count">{log.length} steps</span>
       </button>
       {open && (
         <ul className="audit-list">
@@ -136,6 +188,10 @@ function AuditAccordion({ log }: { log: AuditEvent[] }) {
             <li key={i} className="audit-item">
               <span className="audit-agent">{e.agent}</span>
               <span className="audit-detail">{e.detail}</span>
+              <span className="audit-meta">
+                <ModelBadge model={e.model} />
+                <TimingChip ms={e.ms} />
+              </span>
             </li>
           ))}
         </ul>
@@ -176,6 +232,7 @@ export default function Home() {
         <span className="chat-logo">⚡</span>
         <h1 className="chat-title">Razorpay Saathi</h1>
         <span className="chat-subtitle">Agentic Store Assistant</span>
+        <ActiveModelBadge />
       </header>
 
       <main className="chat-messages">

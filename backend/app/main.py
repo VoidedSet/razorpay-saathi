@@ -4,20 +4,20 @@ main.py — FastAPI entry point.
 /api/chat  →  LangGraph graph  →  astream_events  →  SSE to frontend
 
 SSE event protocol (JSON on each `data:` line):
-  { "type": "audit", "agent": "Manager Agent", "detail": "Routing → Sales Agent" }
+  { "type": "audit", "agent": "Manager Agent", "detail": "...", "model": "qwen2.5:3b", "ms": 230 }
   { "type": "token", "content": "Hello! " }
   { "type": "done" }
   { "type": "error", "message": "..." }
 """
 
 import json
+import time
 import os
-import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, AIMessage
 from dotenv import load_dotenv
 
 from app.graph import build_graph, AgentState, AGENT_LABELS
@@ -38,34 +38,30 @@ app.add_middleware(
 # Compile graph once at startup (not on every request)
 _graph = build_graph()
 
-# ── Node names that are "agent" nodes (i.e., ones that stream tokens to UI) ──
+# Node name sets
 _AGENT_NODES = {"sales_agent", "billing_agent", "promo_agent"}
 _ALL_NODES   = {"manager"} | _AGENT_NODES
 
 
-# ── Request / Response ────────────────────────────────────────────────────────
+# ── Request schema ────────────────────────────────────────────────────────────
 
 class ChatRequest(BaseModel):
     message: str
     session_id: str = "default"
-    history: list[dict] = []    # [{role: "user"|"assistant", content: "..."}]
+    history: list[dict] = []   # [{role: "user"|"assistant", content: "..."}]
 
 
-# ── SSE stream generator ───────────────────────────────────────────────────────
+# ── SSE stream generator ──────────────────────────────────────────────────────
 
 async def langgraph_stream(req: ChatRequest):
     """
-    Runs the LangGraph graph and converts astream_events into SSE lines.
+    Runs the LangGraph graph and converts astream_events into enriched SSE lines.
 
-    Event filtering logic:
-      on_chain_start  (node name in _ALL_NODES)  → emit audit event
-      on_chain_end    (name == "manager")         → emit routing audit event
-      on_chat_model_stream (inside agent node)    → emit token event
-      graph done                                  → emit done event
+    Each audit event now carries:
+      - model: the LLM model name used at that step
+      - ms:    wall-clock milliseconds for the node
+      - comm:  inter-agent communication detail (what was passed between nodes)
     """
-
-    # Rebuild conversation history from client-sent history
-    from langchain_core.messages import HumanMessage, AIMessage
     history_messages = []
     for turn in req.history:
         if turn["role"] == "user":
@@ -82,43 +78,108 @@ async def langgraph_stream(req: ChatRequest):
     def _sse(payload: dict) -> str:
         return f"data: {json.dumps(payload)}\n\n"
 
-    current_node: str | None = None   # track which node is active
+    # ── Per-stream tracking ───────────────────────────────────────────────────
+    current_node: str | None = None
+    node_start_times: dict[str, float] = {}
+    node_models: dict[str, str] = {}   # node_name → model name captured from LLM event
+
+    cfg = active_config()              # static config for display
 
     try:
         async for event in _graph.astream_events(initial_state, version="v2"):
             kind: str = event["event"]
             name: str = event.get("name", "")
+            meta: dict = event.get("metadata", {})
+            data: dict = event.get("data", {})
 
             # ── Node started ──────────────────────────────────────────────────
             if kind == "on_chain_start" and name in _ALL_NODES:
                 current_node = name
+                node_start_times[name] = time.monotonic()
                 label = AGENT_LABELS.get(name, name)
+
+                # For agent nodes, show what message is being forwarded to them
+                comm_detail = None
+                if name in _AGENT_NODES:
+                    inp = data.get("input", {})
+                    msgs = inp.get("messages", [])
+                    n_ctx = len(msgs)
+                    last_human = next(
+                        (m.content[:80] + "…" if len(m.content) > 80 else m.content
+                         for m in reversed(msgs)
+                         if hasattr(m, "type") and m.type == "human"),
+                        None,
+                    )
+                    comm_detail = f"Received {n_ctx} msg(s) in context" + (
+                        f' | Last: "{last_human}"' if last_human else ""
+                    )
+
                 yield _sse({
                     "type":   "audit",
                     "agent":  label,
-                    "detail": "Starting…",
+                    "detail": comm_detail or "Starting…",
+                    "model":  node_models.get(name),
+                    "ms":     None,
                 })
 
-            # ── Manager finished → emit routing decision ───────────────────
+            # ── LLM call started inside a node — capture model name ───────────
+            elif kind == "on_chat_model_start" and current_node:
+                # LangChain populates ls_model_name in metadata
+                model_name = (
+                    meta.get("ls_model_name")
+                    or meta.get("ls_model_type")
+                    or name   # fallback: class name e.g. "ChatOllama"
+                )
+                node_models[current_node] = model_name
+                label = AGENT_LABELS.get(current_node, current_node)
+
+                # Determine routing model vs agent model label
+                is_manager = current_node == "manager"
+                role_tag = "router" if is_manager else "agent"
+
+                yield _sse({
+                    "type":   "audit",
+                    "agent":  label,
+                    "detail": f"LLM call [{role_tag}] → {model_name}",
+                    "model":  model_name,
+                    "ms":     None,
+                })
+
+            # ── Manager finished → emit routing decision with timing ───────────
             elif kind == "on_chain_end" and name == "manager":
-                output     = event["data"].get("output", {})
+                elapsed = _elapsed_ms(node_start_times, "manager")
+                output     = data.get("output", {})
                 next_agent = output.get("next_agent", "")
-                if next_agent:
-                    label = AGENT_LABELS.get(next_agent, next_agent)
-                    yield _sse({
-                        "type":   "audit",
-                        "agent":  "Manager Agent",
-                        "detail": f"Approved routing → {label}",
-                    })
+                label_next = AGENT_LABELS.get(next_agent, next_agent)
+                model_used = node_models.get("manager", cfg["routing_model"])
+
+                yield _sse({
+                    "type":   "audit",
+                    "agent":  "Manager Agent",
+                    "detail": f"Decision: route → {label_next}",
+                    "model":  model_used,
+                    "ms":     elapsed,
+                })
                 current_node = None
 
-            # ── Agent node finished ────────────────────────────────────────
+            # ── Agent node finished → emit timing + model ─────────────────────
             elif kind == "on_chain_end" and name in _AGENT_NODES:
+                elapsed    = _elapsed_ms(node_start_times, name)
+                model_used = node_models.get(name, cfg["model"])
+                label      = AGENT_LABELS.get(name, name)
+
+                yield _sse({
+                    "type":   "audit",
+                    "agent":  label,
+                    "detail": "Response complete",
+                    "model":  model_used,
+                    "ms":     elapsed,
+                })
                 current_node = None
 
-            # ── Token stream — only from agent nodes, never from manager ──
+            # ── Token stream — agents only, never manager ─────────────────────
             elif kind == "on_chat_model_stream" and current_node in _AGENT_NODES:
-                chunk = event["data"].get("chunk")
+                chunk = data.get("chunk")
                 if chunk and hasattr(chunk, "content") and chunk.content:
                     yield _sse({"type": "token", "content": chunk.content})
 
@@ -129,6 +190,11 @@ async def langgraph_stream(req: ChatRequest):
         yield _sse({"type": "done"})
 
 
+def _elapsed_ms(start_times: dict, key: str) -> int | None:
+    t = start_times.get(key)
+    return round((time.monotonic() - t) * 1000) if t else None
+
+
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 @app.post("/api/chat")
@@ -137,7 +203,7 @@ async def chat(req: ChatRequest):
         langgraph_stream(req),
         media_type="text/event-stream",
         headers={
-            "Cache-Control":    "no-cache",
+            "Cache-Control":     "no-cache",
             "X-Accel-Buffering": "no",
         },
     )
