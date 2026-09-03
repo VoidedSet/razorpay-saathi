@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect, FormEvent } from "react";
-import { GenUiStack, UiComponent, inr } from "./genui";
 
 // ── Types & Interfaces ────────────────────────────────────────────────────────
 interface AuditEvent {
@@ -27,31 +26,18 @@ interface CorrectionEvent {
   message: string;
 }
 
-interface ComponentEvent {
-  type: "component";
-  component: string;
-  props: Record<string, unknown>;
-}
-
 interface ErrorEvent {
   type: "error";
   message: string;
 }
 
-type SseEvent =
-  | AuditEvent
-  | TokenEvent
-  | CorrectionEvent
-  | ComponentEvent
-  | DoneEvent
-  | ErrorEvent;
+type SseEvent = AuditEvent | TokenEvent | CorrectionEvent | DoneEvent | ErrorEvent;
 
 interface Message {
   role: "user" | "assistant";
   content: string;
   auditLog: AuditEvent[];
   correction?: string;
-  components?: UiComponent[];
 }
 
 interface Product {
@@ -65,36 +51,68 @@ interface Product {
 
 const PRODUCTS: Product[] = [
   {
-    id: "1",
+    id: "prod_shoe_miami",
     title: "Souled: Miami",
     category: "vintage",
-    price: 12000,
+    price: 120,
     image: "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1743521912_7639983.jpg?w=480&dpr=2",
     description: "A vibrant, retro-inspired sneaker for the Miami soul. Lightweight and comfortable, perfect for a walk by the beach.",
   },
   {
-    id: "2",
+    id: "prod_shoe_mafia",
     title: "UBZ 0.5: Mafia Mules",
     category: "court",
-    price: 9500,
+    price: 95,
     image: "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1761894000_9908200.jpg?w=1080&dpr=2",
     description: "Bold and stylish, these mules make a statement. Inspired by classic cinema, they are the epitome of cool.",
   },
   {
-    id: "3",
+    id: "prod_shoe_yoda",
     title: "Yoda",
     category: "classics",
-    price: 11000,
+    price: 110,
     image: "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1759387261_3013866.jpg?w=1080&dpr=2",
     description: "Wisdom in every step. These classic green-themed sneakers are a must-have for any fan of the galaxy.",
   },
   {
-    id: "4",
+    id: "prod_shoe_ghost",
     title: "Hydros: Ghost",
     category: "running",
-    price: 8500,
+    price: 85,
     image: "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1754742095_6028923.jpg?w=1080&dpr=2",
     description: "Sleek, minimalist, and fast. The Ghost runners are designed for urban exploration, day or night.",
+  },
+  {
+    id: "prod_shoe_hightop",
+    title: "TSS Originals: Urban High-Tops",
+    category: "court",
+    price: 130,
+    image: "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1709121543_9876543.jpg?w=1080&dpr=2",
+    description: "High-top silhouette engineered for urban court performance and retro street aesthetics.",
+  },
+  {
+    id: "prod_shoe_cyber",
+    title: "Supersonic: Cyber Neon",
+    category: "running",
+    price: 105,
+    image: "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1715423891_4492100.jpg?w=1080&dpr=2",
+    description: "Dynamic cushioned running sneakers with vibrant neon accents and responsive foam midsoles.",
+  },
+  {
+    id: "prod_shoe_canvas",
+    title: "Vintage 77: Classic Canvas",
+    category: "classics",
+    price: 75,
+    image: "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1698231012_5541299.jpg?w=1080&dpr=2",
+    description: "Timeless low-profile canvas sneakers crafted for everyday effortless style and comfort.",
+  },
+  {
+    id: "prod_shoe_stealth",
+    title: "Apex: Stealth Black",
+    category: "vintage",
+    price: 115,
+    image: "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1721094833_8829104.jpg?w=1080&dpr=2",
+    description: "Matte black stealth finish with genuine suede overlays and high-traction rubber outsole.",
   },
 ];
 
@@ -166,11 +184,6 @@ function useAgentChat() {
               msg.content += event.content;
             } else if (event.type === "correction") {
               msg.correction = event.message;
-            } else if (event.type === "component") {
-              msg.components = [
-                ...(msg.components ?? []),
-                { component: event.component, props: event.props },
-              ];
             } else if (event.type === "error") {
               msg.content = `Agent error: ${event.message}`;
             } else if (event.type === "done") {
@@ -201,15 +214,15 @@ function useAgentChat() {
     ];
 
     if (lower.includes("miami") || lower.includes("souled") || lower.includes("bargain")) {
-      reply = "Manager Agent authorized a 15% discount on Souled: Miami (₹12,000 → ₹10,200). Would you like me to add it to your cart?";
+      reply = "Manager Agent authorized a 15% discount on Souled: Miami ($120 → $102.00). Would you like me to add it to your cart?";
       auditEvents = [
         { type: "audit", agent: "Manager Agent", detail: "DB Lookup: Profile [Alex] (Gold) | LTV Tier: High", ms: 1 },
         { type: "audit", agent: "Manager Agent", detail: "Margin Check: 16.0% | Requested Discount: 15.0% <= Ceiling", ms: 2 },
-        { type: "audit", agent: "Sales Agent", detail: "Price Override Authorized: ₹10,200", model: "qwen/qwen3.6-27b", ms: 1200 },
+        { type: "audit", agent: "Sales Agent", detail: "Price Override Authorized: $102.00", model: "qwen/qwen3.6-27b", ms: 1200 },
         { type: "audit", agent: "Manager Agent", detail: "✅ AUDIT: products & pricing verified against catalog – no violations", ms: 1 },
       ];
-    } else if (lower.includes("under ₹10,000") || lower.includes("cheap")) {
-      reply = "Here are our verified sneakers under ₹10,000:\n- Hydros: Ghost (₹8,500)\n- UBZ 0.5: Mafia Mules (₹9,500)";
+    } else if (lower.includes("under $100") || lower.includes("cheap")) {
+      reply = "Here are our verified sneakers under $100:\n- Vintage 77: Classic Canvas ($75.00)\n- Hydros: Ghost ($85.00)\n- UBZ 0.5: Mafia Mules ($95.00)";
     }
 
     setTimeout(() => {
@@ -275,7 +288,7 @@ export default function Home() {
 
   // Cart State
   const [cart, setCart] = useState<{ product: Product; quantity: number; appliedPrice: number }[]>([
-    { product: PRODUCTS[0], quantity: 1, appliedPrice: PRODUCTS[0].price },
+    { product: PRODUCTS[0], quantity: 1, appliedPrice: 120 },
   ]);
   const [discount, setDiscount] = useState(0);
   const [cartOpen, setCartOpen] = useState(false);
@@ -293,7 +306,6 @@ export default function Home() {
   const switchStoreMode = (targetMode: "classic" | "agent") => {
     if (targetMode === mode) return;
 
-    // Use native View Transition API if supported
     if (typeof document !== "undefined" && "startViewTransition" in document) {
       (document as unknown as { startViewTransition: (cb: () => void) => void }).startViewTransition(() => {
         setMode(targetMode);
@@ -381,7 +393,7 @@ export default function Home() {
       category === "all"
         ? true
         : category === "sale"
-        ? p.price < 10000
+        ? p.price < 100
         : p.category === category;
     const matchesSearch =
       p.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -486,7 +498,7 @@ export default function Home() {
                       {p.title}
                     </h3>
                     <div className="price-row">
-                      <span className="current-price">{inr(p.price)}</span>
+                      <span className="current-price">${p.price}</span>
                     </div>
                     <button className="add-to-cart-btn" onClick={() => addToCart(p)}>
                       Add to Cart
@@ -516,7 +528,7 @@ export default function Home() {
 
             <div className="chat-messages-feed">
               {messages.map((m, i) => (
-                <div key={i} className={`chat-msg-wrapper ${m.role}${m.components && m.components.length ? " has-genui" : ""}`}>
+                <div key={i} className={`chat-msg-wrapper ${m.role}`}>
                   <div className={m.role === "user" ? "chat-bubble-user-light" : "chat-bubble-assistant-light"}>
                     {m.content || <span style={{ opacity: 0.6 }}>Processing...</span>}
                   </div>
@@ -524,9 +536,6 @@ export default function Home() {
                     <div style={{ marginTop: 6, padding: "6px 10px", borderLeft: "3px solid #b45309", background: "#fef3c7", borderRadius: 4, fontSize: 13, color: "#b45309" }}>
                       {m.correction}
                     </div>
-                  )}
-                  {m.role === "assistant" && (
-                    <GenUiStack items={m.components} onAction={(t) => sendMessage(t, messages)} />
                   )}
                   {m.role === "assistant" && <ThinkingAccordion log={m.auditLog} />}
                 </div>
@@ -536,7 +545,7 @@ export default function Home() {
 
             <div className="chat-chips-row">
               {[
-                "Find me sneakers under ₹10,000",
+                "Find me sneakers under $100",
                 "Can you negotiate a deal on Souled: Miami?",
                 "Recommend a daily versatile pair",
                 "Show reasoning steps",
@@ -565,12 +574,12 @@ export default function Home() {
           <aside className="agent-right-panel">
             <div className="panel-card">
               <h3 className="panel-card-title">Curated Selection</h3>
-              {PRODUCTS.slice(0, 3).map((p) => (
+              {PRODUCTS.slice(0, 4).map((p) => (
                 <div key={p.id} className="rec-shoe-item">
                   <img src={p.image} alt={p.title} className="rec-shoe-img" />
                   <div>
                     <h4 className="rec-shoe-title">{p.title}</h4>
-                    <div className="rec-shoe-price">{inr(p.price)}</div>
+                    <div className="rec-shoe-price">${p.price}</div>
                   </div>
                 </div>
               ))}
@@ -585,13 +594,13 @@ export default function Home() {
                   cart.map((i) => (
                     <div key={i.product.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                       <span>{i.product.title} (x{i.quantity})</span>
-                      <span style={{ fontWeight: 700 }}>{inr(i.appliedPrice * i.quantity)}</span>
+                      <span style={{ fontWeight: 700 }}>${(i.appliedPrice * i.quantity).toFixed(2)}</span>
                     </div>
                   ))
                 )}
                 <div style={{ borderTop: "1px dashed var(--border-warm)", paddingTop: 8, marginTop: 8, display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
                   <span>Total:</span>
-                  <span>{inr(finalTotal)}</span>
+                  <span>${finalTotal.toFixed(2)}</span>
                 </div>
               </div>
               <button className="checkout-btn" style={{ marginTop: 12 }} onClick={() => setCartOpen(true)}>
@@ -641,7 +650,7 @@ export default function Home() {
                 <img src={i.product.image} alt={i.product.title} className="cart-item-img" />
                 <div className="cart-item-details">
                   <div className="cart-item-title">{i.product.title}</div>
-                  <div className="cart-item-price">{inr(i.appliedPrice)}</div>
+                  <div className="cart-item-price">${i.appliedPrice.toFixed(2)}</div>
                   <div className="cart-qty-controls">
                     <button className="qty-btn" onClick={() => updateCartQty(i.product.id, -1)}>-</button>
                     <span>{i.quantity}</span>
@@ -668,7 +677,7 @@ export default function Home() {
           <div className="cart-summary-rows">
             <div className="summary-row total-row">
               <span>Total</span>
-              <span>{inr(finalTotal)}</span>
+              <span>${finalTotal.toFixed(2)}</span>
             </div>
           </div>
 
@@ -691,12 +700,12 @@ export default function Home() {
                 <div>
                   <h2>{activeProduct.title}</h2>
                   <div className="price-row" style={{ marginBottom: "1rem" }}>
-                    <span className="current-price">{inr(activeProduct.price)}</span>
+                    <span className="current-price">${activeProduct.price}</span>
                   </div>
                   <p>{activeProduct.description}</p>
                 </div>
                 <button className="add-to-cart-btn" onClick={() => { addToCart(activeProduct); setActiveProduct(null); }}>
-                  Add to Cart — {inr(activeProduct.price)}
+                  Add to Cart — ${activeProduct.price}
                 </button>
               </div>
             </div>
