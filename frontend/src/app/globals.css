@@ -474,14 +474,10 @@ html, body {
   box-shadow: var(--shadow-sm);
 }
 
-/* ── Stepper Timeline (Image 3 Style - Plain Transparent Div, NO White Background Boxes) ── */
+/* ── Stepper Timeline (collapsed by default) ── */
 .stepper-transparent-container {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  padding: 0.5rem 0;
-  margin-top: 0.6rem;
-  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.4rem 0;
 }
 
 .stepper-main-toggle {
@@ -489,150 +485,522 @@ html, body {
   border: none;
   color: var(--teal);
   font-family: var(--font-body);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
   padding: 0.2rem 0;
+  opacity: 0.8;
+  transition: opacity 0.2s;
 }
 
 .stepper-main-toggle:hover {
-  text-decoration: underline;
+  opacity: 1;
 }
 
 .stepper-meta-tag {
-  color: var(--text-secondary);
-  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
 }
 
 .stepper-time-tag {
-  color: var(--teal);
-  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.73rem;
 }
 
 .stepper-timeline-list {
-  display: flex;
-  flex-direction: column;
-  margin-top: 0.8rem;
-  padding-left: 0.2rem;
-  background: transparent !important;
+  margin-top: 0.5rem;
+  padding-left: 0.1rem;
 }
 
 .stepper-item {
   position: relative;
   display: flex;
   align-items: flex-start;
-  gap: 0.9rem;
-  padding-bottom: 1rem;
-  background: transparent !important;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
 }
 
 .stepper-line {
   position: absolute;
-  left: 13px;
-  top: 26px;
+  left: 11px;
+  top: 23px;
   bottom: 0;
-  width: 2px;
-  background: #cbd5e1;
+  width: 1.5px;
+  background: #d1d5db;
 }
 
 .stepper-circle {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
   flex-shrink: 0;
   z-index: 2;
 }
 
 .circle-blue {
-  background: #1d4ed8;
+  background: var(--teal);
   color: #ffffff;
-  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.15);
 }
 
 .circle-done {
-  background: #e2e8f0;
-  color: #475569;
+  background: #e5e7eb;
+  color: #6b7280;
 }
 
 .stepper-content-box {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
-  background: transparent !important;
-}
-
-.stepper-header-row {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  cursor: pointer;
-  user-select: none;
+  gap: 1px;
+  padding-top: 2px;
 }
 
 .stepper-agent-name {
-  font-family: var(--font-body);
-  font-size: 0.88rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.stepper-summary-line {
+  font-size: 0.77rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.stepper-model-badge {
+  display: inline-block;
+  font-size: 0.67rem;
+  background: var(--teal-light);
+  color: var(--teal-dark);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: var(--font-code);
+  margin-top: 2px;
+}
+
+.stepper-step-time {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+
+/* Manager Correction Bar */
+.manager-correction-bar {
+  margin-top: 6px;
+  padding: 7px 12px;
+  border-left: 3px solid #b45309;
+  background: #fef3c7;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  color: #92400e;
+  line-height: 1.4;
+  animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Gen UI Block (after AI bubble) ── */
+.gen-ui-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+  max-width: 100%;
+  animation: fadeIn 0.3s ease;
+}
+
+/* ── Gen UI: Product Card ── */
+.gen-product-card {
+  background: #ffffff;
+  border: 1px solid var(--border-warm);
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  display: flex;
+  gap: 0.9rem;
+  align-items: flex-start;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.gen-product-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.gen-product-card-recommended {
+  border-color: var(--teal);
+  background: #f0fdfa;
+}
+
+.gen-recommended-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: var(--teal);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  letter-spacing: 0.03em;
+}
+
+.gen-product-monogram {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  background: var(--teal-light);
+  color: var(--teal-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.gen-product-monogram:hover {
+  background: var(--teal);
+  color: #fff;
+}
+
+.gen-product-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.gen-product-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-bottom: 0.2rem;
+}
+
+.gen-product-brand {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.gen-product-dot {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.gen-product-category {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+
+.gen-product-name {
+  font-family: var(--font-heading);
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.gen-product-name:hover {
+  color: var(--teal);
+}
+
+.gen-product-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin-bottom: 0.5rem;
+}
+
+.gen-product-specs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-bottom: 0.5rem;
+  border-left: 2px solid var(--border-warm);
+  padding-left: 0.6rem;
+}
+
+.gen-spec-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.gen-spec-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  min-width: 64px;
+  text-transform: lowercase;
+}
+
+.gen-spec-value {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.gen-product-price {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--teal);
+  font-family: var(--font-heading);
+}
+
+/* ── Gen UI: Checkout Widget ── */
+.gen-checkout-widget {
+  background: #ffffff;
+  border: 1px solid var(--border-warm);
+  border-radius: 10px;
+  padding: 1rem;
+  animation: fadeIn 0.3s ease;
+  max-width: 480px;
+}
+
+.gen-checkout-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.8rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--border-warm);
+}
+
+.gen-checkout-title {
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
   font-weight: 700;
   color: var(--text-primary);
 }
 
-.stepper-summary-line {
+.gen-checkout-ceiling {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.gen-checkout-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.8rem;
+}
+
+.gen-checkout-item-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.gen-checkout-total-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--border-warm);
+}
+
+.gen-checkout-offers {
+  margin-bottom: 0.8rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--amber-light);
+  border-radius: 6px;
+}
+
+.gen-checkout-offers-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--amber);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.4rem;
+}
+
+.gen-offer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.3rem;
+}
+
+.gen-offer-label {
   font-size: 0.8rem;
   color: var(--text-secondary);
 }
 
-.stepper-check-tick {
-  color: var(--teal);
-  font-weight: 700;
-  margin-left: 0.3rem;
-}
-
-.stepper-step-time {
-  font-size: 0.72rem;
-  color: var(--teal);
-  background: var(--teal-light);
-  padding: 1px 6px;
-  border-radius: 4px;
-  margin-left: auto;
-}
-
-/* Expanded Step Details: Transparent Background, No White Boxes */
-.stepper-detail-expanded {
-  margin-top: 0.3rem;
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  padding: 0.3rem 0;
-  font-size: 0.83rem;
-  color: var(--text-secondary);
-}
-
-.stepper-detail-text {
-  line-height: 1.4;
-  margin-bottom: 0.3rem;
-}
-
-.stepper-tag-row {
-  display: flex;
-  gap: 0.4rem;
-}
-
-.stepper-model-badge {
+.gen-offer-code {
   font-size: 0.7rem;
+  font-family: var(--font-code);
+  background: #fff;
+  border: 1px solid var(--border-warm);
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: var(--teal-dark);
+  font-weight: 700;
+}
+
+.gen-checkout-pay-btn {
+  display: block;
+  width: 100%;
+  background: var(--teal);
+  color: #fff;
+  text-align: center;
+  text-decoration: none;
+  padding: 0.65rem;
+  border-radius: 6px;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  font-weight: 700;
+  transition: background 0.2s;
+  margin-bottom: 0.4rem;
+}
+
+.gen-checkout-pay-btn:hover {
+  background: var(--teal-dark);
+}
+
+.gen-checkout-link-id {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-family: var(--font-code);
+  text-align: center;
+}
+
+/* ── Product Detail Modal ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 300;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.product-detail-modal {
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+  padding: 2rem;
+  width: 90vw;
+  max-width: 700px;
+  position: relative;
+  animation: modalEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalEnter {
+  from { opacity: 0; transform: scale(0.95) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  font-size: 1rem;
+  color: var(--text-muted);
+}
+
+.detail-modal-body {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.detail-modal-img {
+  width: 220px;
+  height: 220px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border-warm);
+  background: var(--bg-color);
+}
+
+.detail-modal-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.detail-modal-monogram {
+  width: 120px;
+  height: 120px;
+  flex-shrink: 0;
+  border-radius: 12px;
   background: var(--teal-light);
   color: var(--teal-dark);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: var(--font-code);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+.detail-modal-info {
+  flex: 1;
+}
+
+.detail-modal-name {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0.3rem 0 0.5rem;
+  line-height: 1.25;
+}
+
+.detail-modal-price {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--teal);
+  margin-bottom: 0.75rem;
+  font-family: var(--font-heading);
+}
+
+.detail-modal-desc {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.detail-specs {
+  margin-top: 0.6rem;
 }
 
 /* Chat Input Row */

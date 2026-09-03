@@ -31,13 +31,61 @@ interface ErrorEvent {
   message: string;
 }
 
-type SseEvent = AuditEvent | TokenEvent | CorrectionEvent | DoneEvent | ErrorEvent;
+interface ComponentEvent {
+  type: "component";
+  component: string;
+  props: Record<string, unknown>;
+}
+
+type SseEvent = AuditEvent | TokenEvent | CorrectionEvent | DoneEvent | ErrorEvent | ComponentEvent;
+
+// Gen UI component types
+interface ProductCardProps {
+  id: string;
+  name: string;
+  brand: string;
+  category: string;
+  price: number;
+  currency: string;
+  description: string;
+  stock: number;
+  specs: { label: string; value: string }[];
+  recommended?: boolean;
+}
+
+interface CheckoutItem {
+  id: string;
+  name: string;
+  qty: number;
+  price: number;
+}
+
+interface CheckoutOffer {
+  label: string;
+  code: string;
+  method: string;
+}
+
+interface CheckoutWidgetProps {
+  items: CheckoutItem[];
+  total: number;
+  currency: string;
+  offers: CheckoutOffer[];
+  payment_link: { url: string; id: string } | null;
+  ceiling: number;
+}
+
+interface UiComponent {
+  component: string;
+  props: Record<string, unknown>;
+}
 
 interface Message {
   role: "user" | "assistant";
   content: string;
   auditLog: AuditEvent[];
   correction?: string;
+  components: UiComponent[];
 }
 
 interface Product {
@@ -127,12 +175,12 @@ function useAgentChat() {
   const sendMessage = async (text: string, currentMessages: Message[]) => {
     if (!text.trim() || streaming) return;
 
-    const userMsg: Message = { role: "user", content: text, auditLog: [] };
+    const userMsg: Message = { role: "user", content: text, auditLog: [], components: [] };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setStreaming(true);
 
-    const placeholder: Message = { role: "assistant", content: "", auditLog: [] };
+    const placeholder: Message = { role: "assistant", content: "", auditLog: [], components: [] };
     setMessages((prev) => [...prev, placeholder]);
 
     const history = currentMessages.map((m) => ({
@@ -184,6 +232,8 @@ function useAgentChat() {
               msg.content += event.content;
             } else if (event.type === "correction") {
               msg.correction = event.message;
+            } else if (event.type === "component") {
+              msg.components = [...msg.components, { component: event.component, props: event.props }];
             } else if (event.type === "error") {
               msg.content = `Agent error: ${event.message}`;
             } else if (event.type === "done") {
@@ -204,35 +254,22 @@ function useAgentChat() {
   const simulateLocalResponse = (text: string) => {
     const lower = text.toLowerCase();
     let reply = "I've verified your request against the store catalog and user discount policy. How would you like to proceed?";
-    let auditEvents: AuditEvent[] = [
+    const auditEvents: AuditEvent[] = [
       { type: "audit", agent: "Manager Agent", detail: "DB Lookup: Profile [Alex] (Gold) | Store margin: 16.0% | Discount ceiling: 10.0%", ms: 1 },
       { type: "audit", agent: "Manager Agent", detail: "Guardrail: OK | Routing to Sales Agent", ms: 4 },
-      { type: "audit", agent: "Sales Agent", detail: "ctx=1 msgs" },
-      { type: "audit", agent: "Sales Agent", detail: "LLM [agent] → qwen/qwen3.6-27b", model: "qwen/qwen3.6-27b" },
-      { type: "audit", agent: "Sales Agent", detail: "Response generated (120 chars)", model: "qwen/qwen3.6-27b", ms: 1600 },
-      { type: "audit", agent: "Manager Agent", detail: "✅ AUDIT: products & pricing verified against catalog – no violations", ms: 1 },
+      { type: "audit", agent: "Sales Agent", detail: "LLM [agent] → llama-3.3-70b-versatile", model: "llama-3.3-70b-versatile" },
+      { type: "audit", agent: "Manager Agent", detail: "AUDIT: products & pricing verified against catalog – no violations", ms: 1 },
     ];
-
-    if (lower.includes("miami") || lower.includes("souled") || lower.includes("bargain")) {
-      reply = "Manager Agent authorized a 15% discount on Souled: Miami ($120 → $102.00). Would you like me to add it to your cart?";
-      auditEvents = [
-        { type: "audit", agent: "Manager Agent", detail: "DB Lookup: Profile [Alex] (Gold) | LTV Tier: High", ms: 1 },
-        { type: "audit", agent: "Manager Agent", detail: "Margin Check: 16.0% | Requested Discount: 15.0% <= Ceiling", ms: 2 },
-        { type: "audit", agent: "Sales Agent", detail: "Price Override Authorized: $102.00", model: "qwen/qwen3.6-27b", ms: 1200 },
-        { type: "audit", agent: "Manager Agent", detail: "✅ AUDIT: products & pricing verified against catalog – no violations", ms: 1 },
-      ];
+    if (lower.includes("miami") || lower.includes("souled")) {
+      reply = "Manager Agent authorized a 10% discount on Souled: Miami ($120 → $108). Would you like me to add it to your cart?";
     } else if (lower.includes("under $100") || lower.includes("cheap")) {
-      reply = "Here are our verified sneakers under $100:\n- Vintage 77: Classic Canvas ($75.00)\n- Hydros: Ghost ($85.00)\n- UBZ 0.5: Mafia Mules ($95.00)";
+      reply = "Here are verified sneakers under $100: Vintage 77 Canvas ($75), Hydros Ghost ($85), Mafia Mules ($95).";
     }
 
     setTimeout(() => {
       setMessages((prev) => {
         const next = [...prev];
-        next[next.length - 1] = {
-          role: "assistant",
-          content: reply,
-          auditLog: auditEvents,
-        };
+        next[next.length - 1] = { role: "assistant", content: reply, auditLog: auditEvents, components: [] };
         return next;
       });
     }, 400);
@@ -241,10 +278,9 @@ function useAgentChat() {
   return { messages, setMessages, input, setInput, streaming, sessionPhase, sendMessage };
 }
 
-// ── Stepper Timeline AI Thinking (Matches Image 3 Style - Plain Transparent Div) ──
+// ── Reasoning Timeline (collapsed by default, expandable) ────────────────────
 function ThinkingStepperTimeline({ log }: { log: AuditEvent[] }) {
-  const [timelineOpen, setTimelineOpen] = useState(true);
-  const [expandedStepIdx, setExpandedStepIdx] = useState<number | null>(null);
+  const [open, setOpen] = useState(false);
 
   if (!log || log.length === 0) return null;
 
@@ -252,75 +288,211 @@ function ThinkingStepperTimeline({ log }: { log: AuditEvent[] }) {
 
   return (
     <div className="stepper-transparent-container">
-      {/* Top Level Toggle */}
-      <button
-        type="button"
-        className="stepper-main-toggle"
-        onClick={() => setTimelineOpen((prev) => !prev)}
-      >
-        <span>{timelineOpen ? "▾ Reasoning Timeline" : "▸ Reasoning Timeline"}</span>
+      <button type="button" className="stepper-main-toggle" onClick={() => setOpen((p) => !p)}>
+        <span>{open ? "▾" : "▸"} Reasoning</span>
         <span className="stepper-meta-tag">• {log.length} steps</span>
         {lastMs && <span className="stepper-time-tag">({lastMs >= 1000 ? `${(lastMs / 1000).toFixed(1)}s` : `${lastMs}ms`})</span>}
       </button>
 
-      {timelineOpen && (
+      {open && (
         <div className="stepper-timeline-list">
           {log.map((step, idx) => {
             const isLast = idx === log.length - 1;
-            const isExpanded = expandedStepIdx === idx || isLast; // Active/last step shows details, finished steps show title + tick!
-
             return (
               <div key={idx} className="stepper-item">
-                {/* Connecting Line */}
                 {!isLast && <div className="stepper-line" />}
-
-                {/* Circle Badge */}
                 <div className={`stepper-circle ${isLast ? "circle-blue" : "circle-done"}`}>
                   {isLast ? (
                     <span>{idx + 1}</span>
                   ) : (
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12"></polyline>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
                     </svg>
                   )}
                 </div>
-
-                {/* Content */}
                 <div className="stepper-content-box">
-                  <div
-                    className="stepper-header-row"
-                    onClick={() => setExpandedStepIdx(isExpanded ? null : idx)}
-                  >
-                    <span className="stepper-agent-name">{step.agent}</span>
-                    {!isExpanded && (
-                      <span className="stepper-summary-line">
-                        {step.detail.length > 35 ? `${step.detail.slice(0, 35)}...` : step.detail} <span className="stepper-check-tick">✓</span>
-                      </span>
-                    )}
-                    {step.ms && (
-                      <span className="stepper-step-time">
-                        {step.ms >= 1000 ? `${(step.ms / 1000).toFixed(1)}s` : `${step.ms}ms`}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Expanded Details when active/toggled */}
-                  {isExpanded && (
-                    <div className="stepper-detail-expanded">
-                      <p className="stepper-detail-text">{step.detail}</p>
-                      {step.model && (
-                        <div className="stepper-tag-row">
-                          <span className="stepper-model-badge">{step.model}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <span className="stepper-agent-name">{step.agent}</span>
+                  <span className="stepper-summary-line">{step.detail}</span>
+                  {step.model && <span className="stepper-model-badge">{step.model}</span>}
                 </div>
+                {step.ms && (
+                  <span className="stepper-step-time">
+                    {step.ms >= 1000 ? `${(step.ms / 1000).toFixed(1)}s` : `${step.ms}ms`}
+                  </span>
+                )}
               </div>
             );
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Gen UI: Product Card ──────────────────────────────────────────────────────
+function ProductCard({ props, onViewDetail }: { props: ProductCardProps; onViewDetail: (p: ProductCardProps) => void }) {
+  const initials = props.brand
+    ? props.brand.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()
+    : props.name.slice(0, 2).toUpperCase();
+
+  return (
+    <div className={`gen-product-card ${props.recommended ? "gen-product-card-recommended" : ""}`}>
+      {props.recommended && <span className="gen-recommended-badge">Recommended</span>}
+      <div className="gen-product-monogram" onClick={() => onViewDetail(props)}>
+        {initials}
+      </div>
+      <div className="gen-product-info">
+        <div className="gen-product-meta">
+          <span className="gen-product-brand">{props.brand}</span>
+          <span className="gen-product-dot">·</span>
+          <span className="gen-product-category">{props.category}</span>
+        </div>
+        <h4 className="gen-product-name" onClick={() => onViewDetail(props)}>{props.name}</h4>
+        <p className="gen-product-desc">{props.description}</p>
+        {props.specs.length > 0 && (
+          <div className="gen-product-specs">
+            {props.specs.map((s, i) => (
+              <div key={i} className="gen-spec-row">
+                <span className="gen-spec-label">{s.label}</span>
+                <span className="gen-spec-value">{s.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="gen-product-price">
+          {props.currency === "INR" ? "₹" : "$"}{props.price.toLocaleString("en-IN")}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Gen UI: Checkout Widget ───────────────────────────────────────────────────
+function CheckoutWidget({ props }: { props: CheckoutWidgetProps }) {
+  const total = props.items.reduce((s, i) => s + i.price * i.qty, 0);
+
+  return (
+    <div className="gen-checkout-widget">
+      <div className="gen-checkout-header">
+        <span className="gen-checkout-title">Order Summary</span>
+        <span className="gen-checkout-ceiling">Max discount {props.ceiling}%</span>
+      </div>
+      <div className="gen-checkout-items">
+        {props.items.map((item, i) => (
+          <div key={i} className="gen-checkout-item-row">
+            <span>{item.name} × {item.qty}</span>
+            <span>₹{(item.price * item.qty).toLocaleString("en-IN")}</span>
+          </div>
+        ))}
+        <div className="gen-checkout-total-row">
+          <span>Total</span>
+          <span>₹{total.toLocaleString("en-IN")}</span>
+        </div>
+      </div>
+
+      {props.offers.length > 0 && (
+        <div className="gen-checkout-offers">
+          <div className="gen-checkout-offers-title">Razorpay Bank Offers</div>
+          {props.offers.map((offer, i) => (
+            <div key={i} className="gen-offer-row">
+              <div className="gen-offer-label">{offer.label}</div>
+              {offer.code && <span className="gen-offer-code">{offer.code}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {props.payment_link && (
+        <a
+          href={props.payment_link.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="gen-checkout-pay-btn"
+        >
+          Pay with Razorpay
+        </a>
+      )}
+      {props.payment_link && (
+        <div className="gen-checkout-link-id">Link: {props.payment_link.id}</div>
+      )}
+    </div>
+  );
+}
+
+// ── Gen UI renderer — renders a list of components after the AI bubble ────────
+function GenUIComponents({
+  components,
+  onViewDetail,
+}: {
+  components: UiComponent[];
+  onViewDetail: (p: ProductCardProps) => void;
+}) {
+  if (!components || components.length === 0) return null;
+
+  return (
+    <div className="gen-ui-block">
+      {components.map((comp, i) => {
+        if (comp.component === "product_card") {
+          return <ProductCard key={i} props={comp.props as unknown as ProductCardProps} onViewDetail={onViewDetail} />;
+        }
+        if (comp.component === "checkout_widget") {
+          return <CheckoutWidget key={i} props={comp.props as unknown as CheckoutWidgetProps} />;
+        }
+        return null;
+      })}
+    </div>
+  );
+}
+
+// ── Product Detail Modal ──────────────────────────────────────────────────────
+function ProductDetailModal({
+  product,
+  onClose,
+}: {
+  product: { name: string; brand: string; category: string; price: number; currency: string; description: string; specs: { label: string; value: string }[] } | null;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  if (!product) return null;
+  const symbol = product.currency === "INR" ? "₹" : "$";
+
+  return (
+    <div className="modal-overlay active" onClick={onClose}>
+      <div className="product-detail-modal" onClick={(e) => e.stopPropagation()}>
+        <button className="close-btn modal-close" onClick={onClose}>✕</button>
+        <div className="detail-modal-body">
+          <div className="detail-modal-monogram">
+            {product.brand
+              ? product.brand.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()
+              : product.name.slice(0, 2).toUpperCase()}
+          </div>
+          <div className="detail-modal-info">
+            <div className="gen-product-meta" style={{ marginBottom: "0.4rem" }}>
+              <span className="gen-product-brand">{product.brand}</span>
+              <span className="gen-product-dot">·</span>
+              <span className="gen-product-category">{product.category}</span>
+            </div>
+            <h2 className="detail-modal-name">{product.name}</h2>
+            <div className="detail-modal-price">{symbol}{product.price.toLocaleString("en-IN")}</div>
+            <p className="detail-modal-desc">{product.description}</p>
+            {product.specs.length > 0 && (
+              <div className="gen-product-specs detail-specs">
+                {product.specs.map((s, i) => (
+                  <div key={i} className="gen-spec-row">
+                    <span className="gen-spec-label">{s.label}</span>
+                    <span className="gen-spec-value">{s.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -341,6 +513,12 @@ export default function Home() {
   const [couponInput, setCouponInput] = useState("");
   const [toast, setToast] = useState<string | null>(null);
 
+  // Product detail modal (for classic store cards)
+  const [activeProduct, setActiveProduct] = useState<Product | null>(null);
+
+  // Gen UI product detail modal (for agent chat product cards)
+  const [genProductDetail, setGenProductDetail] = useState<ProductCardProps | null>(null);
+
   // Agent Chat Hook
   const { messages, setMessages, input, setInput, streaming, sessionPhase, sendMessage } = useAgentChat();
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -348,7 +526,6 @@ export default function Home() {
   // Smooth Mode Transition Handler
   const switchStoreMode = (targetMode: "classic" | "agent") => {
     if (targetMode === mode) return;
-
     if (typeof document !== "undefined" && "startViewTransition" in document) {
       (document as unknown as { startViewTransition: (cb: () => void) => void }).startViewTransition(() => {
         setMode(targetMode);
@@ -368,9 +545,10 @@ export default function Home() {
           auditLog: [
             { type: "audit", agent: "Manager Agent", detail: "DB Lookup: Profile [Alex] (Gold) | Store margin: 16.0%", ms: 1 },
             { type: "audit", agent: "Manager Agent", detail: "Guardrail: OK | Routing to Sales Agent", ms: 4 },
-            { type: "audit", agent: "Sales Agent", detail: "LLM [agent] → qwen/qwen3.6-27b", model: "qwen/qwen3.6-27b" },
-            { type: "audit", agent: "Manager Agent", detail: "✅ AUDIT: verified against catalog – no violations", ms: 1 },
+            { type: "audit", agent: "Sales Agent", detail: "LLM [agent] → llama-3.3-70b-versatile", model: "llama-3.3-70b-versatile" },
+            { type: "audit", agent: "Manager Agent", detail: "AUDIT: verified against catalog – no violations", ms: 1 },
           ],
+          components: [],
         },
       ]);
     }
@@ -463,7 +641,6 @@ export default function Home() {
             <span className="logo-part-2">sprints</span>
           </a>
 
-          {/* Minimalist User-Friendly Search Bar */}
           <div className="search-box">
             <svg className="search-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8"></circle>
@@ -533,11 +710,11 @@ export default function Home() {
             <div className="product-grid">
               {filteredProducts.map((p) => (
                 <div key={p.id} className="product-card">
-                  <div className="product-img-wrapper" onClick={() => addToCart(p)}>
+                  <div className="product-img-wrapper" onClick={() => setActiveProduct(p)}>
                     <img src={p.image} alt={p.title} />
                   </div>
                   <div className="product-info">
-                    <h3 className="product-title" onClick={() => addToCart(p)}>
+                    <h3 className="product-title" onClick={() => setActiveProduct(p)}>
                       {p.title}
                     </h3>
                     <div className="price-row">
@@ -576,9 +753,16 @@ export default function Home() {
                     {m.content || <span style={{ opacity: 0.6 }}>Processing...</span>}
                   </div>
                   {m.role === "assistant" && m.correction && (
-                    <div style={{ marginTop: 6, padding: "6px 10px", borderLeft: "3px solid #b45309", background: "#fef3c7", borderRadius: 4, fontSize: 13, color: "#b45309" }}>
+                    <div className="manager-correction-bar">
                       {m.correction}
                     </div>
+                  )}
+                  {/* Gen UI: render components AFTER the bubble, not during streaming */}
+                  {m.role === "assistant" && m.components.length > 0 && (
+                    <GenUIComponents
+                      components={m.components}
+                      onViewDetail={(p) => setGenProductDetail(p)}
+                    />
                   )}
                   {m.role === "assistant" && <ThinkingStepperTimeline log={m.auditLog} />}
                 </div>
@@ -620,7 +804,7 @@ export default function Home() {
               <h3 className="panel-card-title">Curated Selection</h3>
               <div className="vertical-carousel">
                 {PRODUCTS.map((p) => (
-                  <div key={p.id} className="carousel-card" onClick={() => addToCart(p)}>
+                  <div key={p.id} className="carousel-card" onClick={() => setActiveProduct(p)}>
                     <img src={p.image} alt={p.title} className="rec-shoe-img" />
                     <div>
                       <h4 className="rec-shoe-title">{p.title}</h4>
@@ -634,7 +818,6 @@ export default function Home() {
             {/* Cart Summary with Item Thumbnail Icons */}
             <div className="panel-card">
               <h3 className="panel-card-title">Cart Summary</h3>
-
               {cart.length > 0 && (
                 <div className="cart-icons-row">
                   {cart.map((item) => (
@@ -645,7 +828,6 @@ export default function Home() {
                   ))}
                 </div>
               )}
-
               <div style={{ fontSize: "0.9rem" }}>
                 {cart.length === 0 ? (
                   <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Cart is empty.</p>
@@ -732,19 +914,52 @@ export default function Home() {
             />
             <button onClick={applyCoupon}>Apply</button>
           </div>
-
           <div className="cart-summary-rows">
             <div className="summary-row total-row">
               <span>Total</span>
               <span>${finalTotal.toFixed(2)}</span>
             </div>
           </div>
-
           <button className="checkout-btn" onClick={() => alert("Mock Razorpay Autonomous Checkout Initiated!")}>
             Proceed to Checkout
           </button>
         </div>
       </div>
+
+      {/* Classic Store: Product Detail Modal */}
+      {activeProduct && (
+        <div className="modal-overlay active" onClick={() => setActiveProduct(null)}>
+          <div className="product-detail-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="close-btn modal-close" onClick={() => setActiveProduct(null)}>✕</button>
+            <div className="detail-modal-body">
+              <div className="detail-modal-img">
+                <img src={activeProduct.image} alt={activeProduct.title} />
+              </div>
+              <div className="detail-modal-info">
+                <span className="gen-product-category">{activeProduct.category}</span>
+                <h2 className="detail-modal-name">{activeProduct.title}</h2>
+                <div className="detail-modal-price">${activeProduct.price}</div>
+                <p className="detail-modal-desc">{activeProduct.description}</p>
+                <button
+                  className="add-to-cart-btn"
+                  style={{ marginTop: "1.5rem" }}
+                  onClick={() => { addToCart(activeProduct); setActiveProduct(null); }}
+                >
+                  Add to Cart — ${activeProduct.price}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Agent View: Gen UI Product Detail Modal */}
+      {genProductDetail && (
+        <ProductDetailModal
+          product={genProductDetail}
+          onClose={() => setGenProductDetail(null)}
+        />
+      )}
 
       {/* Toast */}
       {toast && (

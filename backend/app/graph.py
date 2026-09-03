@@ -705,7 +705,8 @@ async def billing_agent_node(state: AgentState) -> dict:
 
     prompt   = _billing_system_prompt(state, cart_items, offers_text, payment_link_text)
     llm      = get_llm()
-    messages = [SystemMessage(content=prompt)] + list(state["messages"])
+    # Keep context small — billing agent only needs the last few turns, not the full history
+    messages = [SystemMessage(content=prompt)] + list(state["messages"])[-6:]
     response = await llm.ainvoke(messages)
 
     return {
