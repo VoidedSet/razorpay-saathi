@@ -1,0 +1,1355 @@
+[
+  {
+    "id": "prod_01",
+    "name": "Yeezy Boost 350 V2 'Zebra'",
+    "brand": "Yeezy",
+    "category": "sneakers",
+    "price_inr": 32000,
+    "stock": 35,
+    "description": "Iconic primeknit upper with distinctive black and white zebra stripes and red SPLY-350 accent.",
+    "specs": {
+      "color": "White/Core Black/Red",
+      "size_uk": 9,
+      "material": "Primeknit",
+      "sole": "Boost",
+      "release_year": 2017
+    },
+    "tags": "yeezy,sneakers,zebra,boost,primeknit,streetwear",
+    "related": "prod_51,prod_55,prod_07",
+    "image_url": "https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_02",
+    "name": "Yeezy Slide 'Bone'",
+    "brand": "Yeezy",
+    "category": "sneakers",
+    "price_inr": 26500,
+    "stock": 17,
+    "description": "Minimalist slide injected with EVA foam for lightweight durability and plush cushioning.",
+    "specs": {
+      "color": "Bone",
+      "size_uk": 8,
+      "material": "EVA Foam",
+      "water_resistant": true,
+      "season": "SS22"
+    },
+    "tags": "yeezy,slides,bone,eva,minimalist,comfort",
+    "related": "prod_16,prod_05,prod_37",
+    "image_url": "https://images.unsplash.com/photo-1603808033192-082d6919d3e1?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_03",
+    "name": "Yeezy Foam RNNR 'Onyx'",
+    "brand": "Yeezy",
+    "category": "sneakers",
+    "price_inr": 14500,
+    "stock": 36,
+    "description": "Futuristic molded slip-on shoe crafted from harvested algae and lightweight EVA foam.",
+    "specs": {
+      "color": "Onyx Black",
+      "size_uk": 10,
+      "material": "EVA Foam & Algae",
+      "ventilation": "High",
+      "weight_g": 310
+    },
+    "tags": "yeezy,foamrunner,onyx,futuristic,eco,black",
+    "related": "prod_38,prod_06,prod_64",
+    "image_url": "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_04",
+    "name": "Yeezy Boost 700 'Wave Runner'",
+    "brand": "Yeezy",
+    "category": "sneakers",
+    "price_inr": 26500,
+    "stock": 14,
+    "description": "The dad-shoe archetype featuring multi-layered suede, mesh, and leather with vibrant teal accents.",
+    "specs": {
+      "color": "Solid Grey/Chalk White",
+      "size_uk": 9.5,
+      "material": "Suede & Mesh",
+      "cushioning": "Full Length Boost"
+    },
+    "tags": "yeezy,700,waverunner,chunky,boost,grey",
+    "related": "prod_75,prod_09,prod_60",
+    "image_url": "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_05",
+    "name": "Yeezy 500 'Utility Black'",
+    "brand": "Yeezy",
+    "category": "sneakers",
+    "price_inr": 68000,
+    "stock": 14,
+    "description": "Tonal monochromatic design blending premium suede, leather, and mesh atop an adiprene+ outsole.",
+    "specs": {
+      "color": "Utility Black",
+      "size_uk": 8.5,
+      "material": "Cow Suede & Nubuck",
+      "cushioning": "adiprene+"
+    },
+    "tags": "yeezy,500,utilityblack,adiprene,monochrome",
+    "related": "prod_16,prod_68,prod_49",
+    "image_url": "https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_06",
+    "name": "Yeezy Boost 380 'Alien'",
+    "brand": "Yeezy",
+    "category": "sneakers",
+    "price_inr": 22000,
+    "stock": 4,
+    "description": "Extraterrestrial pattern design with a sock-like Primeknit upper and re-engineered Boost midsole.",
+    "specs": {
+      "color": "Alien White/Grey",
+      "size_uk": 9,
+      "material": "Primeknit",
+      "midsole": "Translucent Boost"
+    },
+    "tags": "yeezy,380,alien,boost,camo",
+    "related": "prod_51,prod_01,prod_53",
+    "image_url": "https://images.unsplash.com/photo-1608231387042-66d1773070a5?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_07",
+    "name": "Yeezy Quantum 'Barium'",
+    "brand": "Yeezy",
+    "category": "sneakers",
+    "price_inr": 22000,
+    "stock": 15,
+    "description": "High-top basketball hybrid sneaker engineered with synthetic suede toe cap and reflective heels.",
+    "specs": {
+      "color": "Barium Dark Grey",
+      "size_uk": 10.5,
+      "material": "Jacquard Mesh & Suede",
+      "ankle_support": "High"
+    },
+    "tags": "yeezy,quantum,barium,hightop,basketball",
+    "related": "prod_03,prod_39,prod_71",
+    "image_url": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_08",
+    "name": "Yeezy 450 'Cloud White'",
+    "brand": "Yeezy",
+    "category": "sneakers",
+    "price_inr": 26500,
+    "stock": 8,
+    "description": "Avant-garde design featuring a knit upper engulfed by a claw-like molded foam exoskeleton.",
+    "specs": {
+      "color": "Cloud White",
+      "size_uk": 9,
+      "material": "Knit & PU Foam",
+      "closure": "Lace-Up",
+      "fit": "Snug"
+    },
+    "tags": "yeezy,450,cloudwhite,exoskeleton,knit",
+    "related": "prod_24,prod_05,prod_63",
+    "image_url": "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_09",
+    "name": "Yeezy Slide 'Pure'",
+    "brand": "Yeezy",
+    "category": "sneakers",
+    "price_inr": 22000,
+    "stock": 37,
+    "description": "Neutral tan slip-on crafted with textured EVA foam and strategic groove traction.",
+    "specs": {
+      "color": "Pure Tan",
+      "size_uk": 7,
+      "material": "EVA Foam",
+      "grip_pattern": "Deep Horizontal Grooves"
+    },
+    "tags": "yeezy,slides,pure,tan,minimalist",
+    "related": "prod_01,prod_70,prod_26",
+    "image_url": "https://images.unsplash.com/photo-1603808033192-082d6919d3e1?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_10",
+    "name": "Yeezy Boost 350 V2 'Beluga 2.0'",
+    "brand": "Yeezy",
+    "category": "sneakers",
+    "price_inr": 95000,
+    "stock": 12,
+    "description": "Muted grey primeknit matrix with reverse orange SPLY-350 lettering across the lateral side.",
+    "specs": {
+      "color": "Grey/Bold Orange",
+      "size_uk": 10,
+      "material": "Primeknit",
+      "sole": "Boost",
+      "release_year": 2017
+    },
+    "tags": "yeezy,350,beluga,boost,grey",
+    "related": "prod_03,prod_39,prod_53",
+    "image_url": "https://images.unsplash.com/photo-1539185441755-769473a23570?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_11",
+    "name": "Air Jordan 1 Retro High OG 'Chicago Reimagined'",
+    "brand": "Nike",
+    "category": "sneakers",
+    "price_inr": 68000,
+    "stock": 9,
+    "description": "Timeless basketball sneaker styled with distressed cracked leather detailing for a retro aesthetic.",
+    "specs": {
+      "color": "Varsity Red/Black/Sail",
+      "size_uk": 9.5,
+      "material": "Cracked Leather",
+      "profile": "High-Top"
+    },
+    "tags": "nike,jordan1,chicago,highog,retro",
+    "related": "prod_04,prod_48,prod_36",
+    "image_url": "https://images.unsplash.com/photo-1512374382149-233c42b6a83b?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_12",
+    "name": "Nike Dunk Low 'Panda'",
+    "brand": "Nike",
+    "category": "sneakers",
+    "price_inr": 14500,
+    "stock": 9,
+    "description": "Versatile classic streetwear dunk featuring two-tone black and white full-grain leather upper.",
+    "specs": {
+      "color": "Black/White",
+      "size_uk": 8,
+      "material": "Leather",
+      "sole": "Rubber Cupsole"
+    },
+    "tags": "nike,dunklow,panda,blackwhite,leather",
+    "related": "prod_10,prod_51,prod_25",
+    "image_url": "https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_13",
+    "name": "Off-White x Nike Air Force 1 'MCA'",
+    "brand": "Off-White",
+    "category": "sneakers",
+    "price_inr": 14500,
+    "stock": 15,
+    "description": "Virgil Abloh's iconic blue leather AF1 with metallic silver swoosh and signature zip tie.",
+    "specs": {
+      "color": "University Blue/Silver",
+      "size_uk": 10,
+      "material": "Leather",
+      "accent": "Red Zip Tie"
+    },
+    "tags": "offwhite,nike,af1,mca,virgilabloh,blue",
+    "related": "prod_61,prod_75,prod_48",
+    "image_url": "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_14",
+    "name": "Travis Scott x Air Jordan 1 Low 'Reverse Mocha'",
+    "brand": "Travis Scott",
+    "category": "sneakers",
+    "price_inr": 68000,
+    "stock": 5,
+    "description": "Collaborative low-top sneaker featuring reverse swoosh logo and premium brown nubuck overlays.",
+    "specs": {
+      "color": "Sail/Dark Mocha",
+      "size_uk": 9,
+      "material": "Nubuck & Leather",
+      "special_box": true
+    },
+    "tags": "travisscott,jordan1,reversemocha,cactusjack",
+    "related": "prod_02,prod_37,prod_52",
+    "image_url": "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_15",
+    "name": "Balenciaga Triple S 'Clear Sole Black'",
+    "brand": "Balenciaga",
+    "category": "sneakers",
+    "price_inr": 14500,
+    "stock": 23,
+    "description": "Chunky triple-stacked sole sneaker with athletic mesh base and embroidered size on the toe.",
+    "specs": {
+      "color": "Black",
+      "size_eu": 43,
+      "material": "Mesh & Leather",
+      "weight_kg": 1.4,
+      "sole": "Triple Layer TPU"
+    },
+    "tags": "balenciaga,triples,chunky,luxury,black",
+    "related": "prod_53,prod_39,prod_30",
+    "image_url": "https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_16",
+    "name": "Fear of God California Slip-On 'Oatmeal'",
+    "brand": "Fear of God",
+    "category": "sneakers",
+    "price_inr": 18000,
+    "stock": 26,
+    "description": "Sculpted slip-on shoe handmade in Italy from closed-cell foam with a minimalist rear backstop.",
+    "specs": {
+      "color": "Oatmeal",
+      "size_eu": 42,
+      "material": "Closed-Cell Foam",
+      "origin": "Italy"
+    },
+    "tags": "fearofgod,california,slipon,oatmeal,minimal",
+    "related": "prod_60,prod_21,prod_66",
+    "image_url": "https://images.unsplash.com/photo-1603808033192-082d6919d3e1?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_17",
+    "name": "Yeezy Slide 'Onyx'",
+    "brand": "Yeezy",
+    "category": "sneakers",
+    "price_inr": 22000,
+    "stock": 38,
+    "description": "Stealthy matte black EVA foam slide offering comfort, durability, and easy slip-on wear.",
+    "specs": {
+      "color": "Matte Black",
+      "size_uk": 9,
+      "material": "EVA Foam",
+      "waterproof": true
+    },
+    "tags": "yeezy,slides,onyx,black,foam",
+    "related": "prod_03,prod_14,prod_29",
+    "image_url": "https://images.unsplash.com/photo-1603808033192-082d6919d3e1?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_18",
+    "name": "Yeezy 700 V3 'Azael'",
+    "brand": "Yeezy",
+    "category": "sneakers",
+    "price_inr": 18000,
+    "stock": 22,
+    "description": "Futuristic low-top with glow-in-the-dark RPU cage overlay and monofilament woven upper.",
+    "specs": {
+      "color": "Azael Off-White",
+      "size_uk": 9,
+      "material": "Engineered Monofilament & RPU",
+      "feature": "Glow-In-The-Dark"
+    },
+    "tags": "yeezy,700v3,azael,glowinthedark,rpu",
+    "related": "prod_15,prod_09,prod_43",
+    "image_url": "https://images.unsplash.com/photo-1608231387042-66d1773070a5?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_19",
+    "name": "Yeezy Boost 350 V2 'Dazzling Blue'",
+    "brand": "Yeezy",
+    "category": "sneakers",
+    "price_inr": 18000,
+    "stock": 9,
+    "description": "Core black Primeknit upper punctuated with a striking royal blue lateral stripe and SPLY logo.",
+    "specs": {
+      "color": "Core Black/Dazzling Blue",
+      "size_uk": 10,
+      "material": "Primeknit",
+      "sole": "Boost"
+    },
+    "tags": "yeezy,350,dazzlingblue,boost,black",
+    "related": "prod_60,prod_36,prod_49",
+    "image_url": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_20",
+    "name": "Adidas Adilette 22 Slides 'Desert Sand'",
+    "brand": "Adidas",
+    "category": "sneakers",
+    "price_inr": 14500,
+    "stock": 29,
+    "description": "3D topographic map-inspired slides constructed with bio-based EVA material containing sugarcane.",
+    "specs": {
+      "color": "Desert Sand",
+      "size_uk": 8,
+      "material": "Bio-EVA",
+      "texture": "Topographic 3D"
+    },
+    "tags": "adidas,adilette22,desertsand,3d,eco",
+    "related": "prod_54,prod_37,prod_56",
+    "image_url": "https://images.unsplash.com/photo-1603808033192-082d6919d3e1?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_21",
+    "name": "BAPE STA Low 'White Black'",
+    "brand": "BAPE",
+    "category": "sneakers",
+    "price_inr": 120000,
+    "stock": 32,
+    "description": "Japanese streetwear classic crafted in glossy patent leather with the signature STA star motif.",
+    "specs": {
+      "color": "White/Black",
+      "size_jp": 27.5,
+      "material": "Patent Leather",
+      "star_logo": "Stitched"
+    },
+    "tags": "bape,bapesta,patentleather,star,tokyo",
+    "related": "prod_28,prod_54,prod_60",
+    "image_url": "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_22",
+    "name": "Yeezy Foam RNNR 'Vermilion'",
+    "brand": "Yeezy",
+    "category": "sneakers",
+    "price_inr": 120000,
+    "stock": 33,
+    "description": "Vibrant all-red molded foam runner delivering an eye-catching avant-garde silhouette.",
+    "specs": {
+      "color": "Vermilion Red",
+      "size_uk": 9,
+      "material": "EVA & Algae",
+      "weight_g": 315
+    },
+    "tags": "yeezy,foamrunner,vermilion,red,statement",
+    "related": "prod_02,prod_42,prod_18",
+    "image_url": "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_23",
+    "name": "Yeezy Boost 700 V2 'Static'",
+    "brand": "Yeezy",
+    "category": "sneakers",
+    "price_inr": 18000,
+    "stock": 28,
+    "description": "Reflective 3M side stripes integrated across pale grey mesh and premium cream leather panels.",
+    "specs": {
+      "color": "Static Grey/Cream",
+      "size_uk": 9.5,
+      "material": "Mesh, Suede & Leather",
+      "reflective_3m": true
+    },
+    "tags": "yeezy,700v2,static,3m,reflective",
+    "related": "prod_74,prod_45,prod_60",
+    "image_url": "https://images.unsplash.com/photo-1539185441755-769473a23570?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_24",
+    "name": "Air Jordan 4 Retro 'Military Black'",
+    "brand": "Nike",
+    "category": "sneakers",
+    "price_inr": 95000,
+    "stock": 23,
+    "description": "Clean color-blocked high top featuring smooth white leather, neutral grey suede, and black accents.",
+    "specs": {
+      "color": "White/Black/Neutral Grey",
+      "size_uk": 10,
+      "material": "Full-Grain Leather",
+      "air_unit": "Visible Air"
+    },
+    "tags": "nike,jordan4,militaryblack,retro,basketball",
+    "related": "prod_05,prod_44,prod_75",
+    "image_url": "https://images.unsplash.com/photo-1512374382149-233c42b6a83b?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_25",
+    "name": "Yeezy Knit Runner 'Stone Carbon'",
+    "brand": "Yeezy",
+    "category": "sneakers",
+    "price_inr": 18000,
+    "stock": 9,
+    "description": "Seamless laceless sock silhouette enveloped in fully knitted fabric with sizing printed at collar.",
+    "specs": {
+      "color": "Stone Carbon/Mustard",
+      "size_uk": 9,
+      "material": "Structured Knit",
+      "fit": "True to size"
+    },
+    "tags": "yeezy,knitrunner,stonecarbon,laceless,knit",
+    "related": "prod_68,prod_58,prod_45",
+    "image_url": "https://images.unsplash.com/photo-1608231387042-66d1773070a5?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_26",
+    "name": "Kith x Asics Gel-Lyte III 'Super Blue'",
+    "brand": "Kith",
+    "category": "sneakers",
+    "price_inr": 45000,
+    "stock": 8,
+    "description": "Ronnie Fieg designed retro runner with rich suede uppers and Gel cushioning system.",
+    "specs": {
+      "color": "Super Blue/Grey",
+      "size_uk": 8.5,
+      "material": "Pigskin Suede",
+      "cushioning": "Gel Tech"
+    },
+    "tags": "kith,asics,gellyte,ronniefieg,suede",
+    "related": "prod_43,prod_55,prod_59",
+    "image_url": "https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_27",
+    "name": "Yeezy Boost 350 V2 'Onyx'",
+    "brand": "Yeezy",
+    "category": "sneakers",
+    "price_inr": 26500,
+    "stock": 12,
+    "description": "Triple black Primeknit execution paired with semi-translucent TPU midsole encapsulation.",
+    "specs": {
+      "color": "Onyx Black",
+      "size_uk": 9,
+      "material": "Primeknit",
+      "sole": "Encapsulated Boost"
+    },
+    "tags": "yeezy,350,onyx,tripleblack,stealth",
+    "related": "prod_66,prod_62,prod_34",
+    "image_url": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_28",
+    "name": "Off-White OOO 'Out of Office' Sneaker",
+    "brand": "Off-White",
+    "category": "sneakers",
+    "price_inr": 45000,
+    "stock": 39,
+    "description": "Retro-inspired low top leather trainer featuring contrasting arrow emblem and tag detail.",
+    "specs": {
+      "color": "White/Green",
+      "size_eu": 42,
+      "material": "Calfskin Leather",
+      "closure": "Lace-up"
+    },
+    "tags": "offwhite,outofoffice,arrow,luxury,whitegreen",
+    "related": "prod_06,prod_74,prod_32",
+    "image_url": "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_29",
+    "name": "Yeezy Slide 'Flax'",
+    "brand": "Yeezy",
+    "category": "sneakers",
+    "price_inr": 18000,
+    "stock": 8,
+    "description": "Earthy copper brown tone slip-on engineered with lightweight injected EVA foam.",
+    "specs": {
+      "color": "Flax Brown",
+      "size_uk": 11,
+      "material": "EVA Foam",
+      "finish": "Textured"
+    },
+    "tags": "yeezy,slides,flax,earthtone,comfort",
+    "related": "prod_74,prod_31,prod_17",
+    "image_url": "https://images.unsplash.com/photo-1603808033192-082d6919d3e1?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_30",
+    "name": "Yeezy Boost 700 'MNVN Metallic'",
+    "brand": "Yeezy",
+    "category": "sneakers",
+    "price_inr": 120000,
+    "stock": 3,
+    "description": "No-sew polyester upper with oversized metallic silver 700 graphic and bungee infinity laces.",
+    "specs": {
+      "color": "Metallic Silver/Black",
+      "size_uk": 9,
+      "material": "Minimally-stitched Nylon",
+      "laces": "Bungee"
+    },
+    "tags": "yeezy,mnvn,metallic,bungeelace,polyester",
+    "related": "prod_71,prod_19,prod_15",
+    "image_url": "https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_31",
+    "name": "Fear of God Essentials Oversized Hoodie",
+    "brand": "Fear of God",
+    "category": "apparel",
+    "price_inr": 62000,
+    "stock": 34,
+    "description": "Heavyweight fleece hoodie styled with dropped shoulders and rubberized logo patch on the hood.",
+    "specs": {
+      "color": "Stretch Limo Black",
+      "size": "L",
+      "material": "80% Cotton / 20% Polyester",
+      "fit": "Oversized Heavyweight"
+    },
+    "tags": "fog,essentials,hoodie,oversized,streetwear,fleece",
+    "related": "prod_12,prod_20,prod_43",
+    "image_url": "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_32",
+    "name": "Yeezy Gap Engineered by Balenciaga Puffer Jacket",
+    "brand": "Yeezy",
+    "category": "apparel",
+    "price_inr": 78000,
+    "stock": 32,
+    "description": "Sculptural outerwear piece featuring an exaggerated cropped silhouette and matte nylon shell.",
+    "specs": {
+      "color": "Matte Black",
+      "size": "M",
+      "material": "100% Nylon Shell",
+      "filling": "90/10 Duck Down",
+      "fit": "Boxy Cropped"
+    },
+    "tags": "yeezy,gap,balenciaga,puffer,jacket,black",
+    "related": "prod_63,prod_16,prod_75",
+    "image_url": "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_33",
+    "name": "Supreme Box Logo Hooded Sweatshirt 'Heather Grey'",
+    "brand": "Supreme",
+    "category": "apparel",
+    "price_inr": 24000,
+    "stock": 40,
+    "description": "Heavyweight cross-grain cotton fleece hoodie featuring the iconic red embroidered box logo.",
+    "specs": {
+      "color": "Heather Grey",
+      "size": "L",
+      "material": "100% Heavyweight Cotton Fleece",
+      "country_of_origin": "Canada"
+    },
+    "tags": "supreme,boxlogo,bogo,hoodie,heathergrey,grail",
+    "related": "prod_55,prod_64,prod_51",
+    "image_url": "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_34",
+    "name": "Travis Scott Cactus Jack AstroWorld Hoodie",
+    "brand": "Travis Scott",
+    "category": "apparel",
+    "price_inr": 35000,
+    "stock": 17,
+    "description": "Official tour merch featuring front 'Look Mom I Can Fly' embroidery and back graphic print.",
+    "specs": {
+      "color": "Black",
+      "size": "XL",
+      "material": "100% Cotton",
+      "print": "Puff Print & Embroidery"
+    },
+    "tags": "travisscott,cactusjack,astroworld,hoodie,merch",
+    "related": "prod_24,prod_44,prod_07",
+    "image_url": "https://images.unsplash.com/photo-1578587018452-892bacefd3f2?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_35",
+    "name": "Off-White Caravaggio Arrow Oversized Tee",
+    "brand": "Off-White",
+    "category": "apparel",
+    "price_inr": 16500,
+    "stock": 19,
+    "description": "Classic jersey tee featuring Caravaggio renaissance artwork merged into the iconic cross arrows.",
+    "specs": {
+      "color": "White",
+      "size": "M",
+      "material": "100% Cotton Jersey",
+      "fit": "Relaxed Oversized"
+    },
+    "tags": "offwhite,caravaggio,tee,arrows,virgilabloh",
+    "related": "prod_68,prod_67,prod_21",
+    "image_url": "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_36",
+    "name": "BAPE Shark Full-Zip Double Hoodie 'Green Camo'",
+    "brand": "BAPE",
+    "category": "apparel",
+    "price_inr": 16500,
+    "stock": 36,
+    "description": "Signature full-zip hoodie with WGM felt patches and embroidered shark jaws across the hood.",
+    "specs": {
+      "color": "1st Camo Green",
+      "size": "L",
+      "material": "100% Cotton Fleece",
+      "closure": "Dual Full-Zip"
+    },
+    "tags": "bape,sharkhoodie,greencamo,fullzip,harajuku",
+    "related": "prod_52,prod_17,prod_30",
+    "image_url": "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_37",
+    "name": "Rhude Eagle Graphic Oversized Tee",
+    "brand": "Rhude",
+    "category": "apparel",
+    "price_inr": 78000,
+    "stock": 13,
+    "description": "Vintage washed heavy cotton t-shirt decorated with sun-faded eagle print and hand distressed hem.",
+    "specs": {
+      "color": "Vintaged Charcoal",
+      "size": "L",
+      "material": "100% Carded Cotton",
+      "wash": "Custom Sun Fade"
+    },
+    "tags": "rhude,vintagewash,eagle,tee,losangeles",
+    "related": "prod_62,prod_20,prod_25",
+    "image_url": "https://images.unsplash.com/photo-1516257984-b1b4d707412e?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_38",
+    "name": "Palm Angels Curved Logo Sweatpants",
+    "brand": "Palm Angels",
+    "category": "apparel",
+    "price_inr": 12500,
+    "stock": 40,
+    "description": "Luxury lounge pants featuring signature arched gothic script logo across the rear seat.",
+    "specs": {
+      "color": "Black/White",
+      "size": "M",
+      "material": "100% French Terry Cotton",
+      "waist": "Elasticated Drawstring"
+    },
+    "tags": "palmangels,sweatpants,gothic,lounge,black",
+    "related": "prod_55,prod_09,prod_11",
+    "image_url": "https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_39",
+    "name": "Yeezy Season 6 Heavyweight Fleece Sweatpants",
+    "brand": "Yeezy",
+    "category": "apparel",
+    "price_inr": 62000,
+    "stock": 17,
+    "description": "Garment-dyed minimalist fleece pants designed with deep side pockets and elastic ankles.",
+    "specs": {
+      "color": "Core Brown",
+      "size": "L",
+      "material": "100% Garment-Dyed Cotton",
+      "fit": "Relaxed Tapered"
+    },
+    "tags": "yeezy,season6,sweatpants,core,garmentdyed",
+    "related": "prod_15,prod_33,prod_74",
+    "image_url": "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_40",
+    "name": "Fear of God Essentials Fleece Short 'Desert Taupe'",
+    "brand": "Fear of God",
+    "category": "apparel",
+    "price_inr": 8500,
+    "stock": 36,
+    "description": "Lounge shorts with extended drawstrings and understated Essentials rubberized patch.",
+    "specs": {
+      "color": "Desert Taupe",
+      "size": "M",
+      "material": "80% Cotton / 20% Polyester",
+      "inseam_inches": 7
+    },
+    "tags": "fog,essentials,shorts,deserttaupe,summer",
+    "related": "prod_60,prod_54,prod_34",
+    "image_url": "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_41",
+    "name": "Balenciaga Speed Hunters Matrix Hoodie",
+    "brand": "Balenciaga",
+    "category": "apparel",
+    "price_inr": 48000,
+    "stock": 7,
+    "description": "Ultra-oversized vintage washed hoodie displaying fictional boyband graphic across the chest.",
+    "specs": {
+      "color": "Washed Black",
+      "size": "S (Fits XL)",
+      "material": "Heavy Cotton Fleece",
+      "fit": "Extreme Oversized"
+    },
+    "tags": "balenciaga,speedhunters,hoodie,oversized,couture",
+    "related": "prod_38,prod_30,prod_40",
+    "image_url": "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_42",
+    "name": "St\u00fcssy Basic Logo Crewneck Sweatshirt",
+    "brand": "St\u00fcssy",
+    "category": "apparel",
+    "price_inr": 35000,
+    "stock": 21,
+    "description": "Californian streetwear staple crewneck printed with Shawn Stussy's original signature logo.",
+    "specs": {
+      "color": "Ash Grey",
+      "size": "L",
+      "material": "80% Cotton / 20% Polyester",
+      "neckline": "Ribbed Crew"
+    },
+    "tags": "stussy,crewneck,basiclogo,ashgrey,surfstreet",
+    "related": "prod_63,prod_53,prod_72",
+    "image_url": "https://images.unsplash.com/photo-1578587018452-892bacefd3f2?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_43",
+    "name": "Kith Box Logo Williams III Hoodie",
+    "brand": "Kith",
+    "category": "apparel",
+    "price_inr": 62000,
+    "stock": 32,
+    "description": "500 GSM custom combed cotton fleece sweatshirt detailed with tonal embroidered chest logo.",
+    "specs": {
+      "color": "Nocturnal Navy",
+      "size": "L",
+      "material": "500GSM Combed Cotton",
+      "weight": "Ultra Heavyweight"
+    },
+    "tags": "kith,williamsiii,500gsm,hoodie,navy",
+    "related": "prod_26,prod_11,prod_46",
+    "image_url": "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_44",
+    "name": "Heron Preston CTNMB Mock Neck Long Sleeve",
+    "brand": "Heron Preston",
+    "category": "apparel",
+    "price_inr": 35000,
+    "stock": 18,
+    "description": "Ribbed mock collar top stamped with Cyrillic 'STYLE' embroidery and orange sleeve patch.",
+    "specs": {
+      "color": "Black/Orange",
+      "size": "M",
+      "material": "100% Organic Cotton",
+      "collar": "Mock Neck"
+    },
+    "tags": "heronpreston,ctnmb,mockneck,orange,cyrillic",
+    "related": "prod_09,prod_67,prod_34",
+    "image_url": "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_45",
+    "name": "Vetements 'Target' Oversized Graphic Tee",
+    "brand": "Vetements",
+    "category": "apparel",
+    "price_inr": 62000,
+    "stock": 29,
+    "description": "Subversive streetwear graphic tee cut with extreme shoulder drop and reinforced neckline.",
+    "specs": {
+      "color": "Black",
+      "size": "M",
+      "material": "100% Heavy Jersey Cotton",
+      "fit": "Vetements Boxy"
+    },
+    "tags": "vetements,graphictee,target,highstreet,overfit",
+    "related": "prod_63,prod_05,prod_54",
+    "image_url": "https://images.unsplash.com/photo-1516257984-b1b4d707412e?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_46",
+    "name": "Yeezy Gap Engineered by Balenciaga Dove Hoodie",
+    "brand": "Yeezy",
+    "category": "apparel",
+    "price_inr": 48000,
+    "stock": 18,
+    "description": "Double-layered seamless hoodie adorned with a subtle faded white dove graphic on the back.",
+    "specs": {
+      "color": "Washed Black",
+      "size": "L",
+      "material": "Double-Layered 100% Cotton",
+      "feature": "Seamless Construction"
+    },
+    "tags": "yeezy,gap,balenciaga,dovehoodie,washed",
+    "related": "prod_50,prod_69,prod_22",
+    "image_url": "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_47",
+    "name": "Travis Scott x Fragment Design T-Shirt",
+    "brand": "Travis Scott",
+    "category": "apparel",
+    "price_inr": 62000,
+    "stock": 37,
+    "description": "Triple collaboration tee pairing Cactus Jack imagery with Fragment's lightning bolt motif.",
+    "specs": {
+      "color": "Aged Aged Cream",
+      "size": "XL",
+      "material": "100% Vintage Washed Cotton",
+      "print": "Screenprint"
+    },
+    "tags": "travisscott,fragment,cactusjack,hiroshifujiwara",
+    "related": "prod_43,prod_05,prod_73",
+    "image_url": "https://images.unsplash.com/photo-1578587018452-892bacefd3f2?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_48",
+    "name": "Supreme Motion Logo Hooded Sweatshirt",
+    "brand": "Supreme",
+    "category": "apparel",
+    "price_inr": 16500,
+    "stock": 9,
+    "description": "Fleece pullover highlighted by the blur-effect motion logo printed across the chest.",
+    "specs": {
+      "color": "Black",
+      "size": "M",
+      "material": "100% Cotton Fleece",
+      "pocket": "Kangaroo Front"
+    },
+    "tags": "supreme,motionlogo,black,hoodie,skateboarding",
+    "related": "prod_01,prod_22,prod_64",
+    "image_url": "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_49",
+    "name": "Off-White Marker Pen Diagonal Zip Hoodie",
+    "brand": "Off-White",
+    "category": "apparel",
+    "price_inr": 12500,
+    "stock": 21,
+    "description": "Full zip jacket styled with marker-stroke diagonal lines down sleeves and cross back logo.",
+    "specs": {
+      "color": "Black/Fuchsia",
+      "size": "L",
+      "material": "100% French Terry Cotton",
+      "closure": "Metal Zip"
+    },
+    "tags": "offwhite,markerpen,zipup,diagonals,black",
+    "related": "prod_59,prod_72,prod_33",
+    "image_url": "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_50",
+    "name": "Palm Angels Classic Track Jacket",
+    "brand": "Palm Angels",
+    "category": "apparel",
+    "price_inr": 62000,
+    "stock": 16,
+    "description": "Athletic track top featuring white striped trim along sleeves and gothic logo on front chest.",
+    "specs": {
+      "color": "Bright Red",
+      "size": "M",
+      "material": "100% Polyester",
+      "neck": "Funnel Collar"
+    },
+    "tags": "palmangels,trackjacket,stripes,athleisure,red",
+    "related": "prod_20,prod_08,prod_15",
+    "image_url": "https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_51",
+    "name": "Fear of God Essentials Thermal Henley Tee",
+    "brand": "Fear of God",
+    "category": "apparel",
+    "price_inr": 78000,
+    "stock": 8,
+    "description": "Waffle knit thermal shirt engineered with raw hem finishing and three-button placket.",
+    "specs": {
+      "color": "Concrete Grey",
+      "size": "L",
+      "material": "100% Waffle Cotton",
+      "buttons": "Custom Rubberized"
+    },
+    "tags": "fog,essentials,henley,waffleknit,layering",
+    "related": "prod_38,prod_62,prod_12",
+    "image_url": "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_52",
+    "name": "BAPE ABC Camo Shark Sweatpants",
+    "brand": "BAPE",
+    "category": "apparel",
+    "price_inr": 24000,
+    "stock": 13,
+    "description": "All-over ABC camo print fleece jogger pants with printed shark mouth detailing on the crotch.",
+    "specs": {
+      "color": "Green Camo",
+      "size": "L",
+      "material": "100% Cotton Fleece",
+      "waist": "Drawstring"
+    },
+    "tags": "bape,abccamo,sharkpants,green,japanese",
+    "related": "prod_24,prod_14,prod_09",
+    "image_url": "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_53",
+    "name": "Yeezy Season 5 Calabasas Track Pants",
+    "brand": "Yeezy",
+    "category": "apparel",
+    "price_inr": 78000,
+    "stock": 8,
+    "description": "Retro double-knit nylon track pants emblazoned with Calabasas text logo along side stripes.",
+    "specs": {
+      "color": "Ink / Solar Red",
+      "size": "M",
+      "material": "100% Double-Knit Nylon",
+      "zips": "Ankle Zippers"
+    },
+    "tags": "yeezy,calabasas,trackpants,retro,nylon",
+    "related": "prod_06,prod_25,prod_12",
+    "image_url": "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_54",
+    "name": "Rhude Moonlight Tropical Hawaiian Shirt",
+    "brand": "Rhude",
+    "category": "apparel",
+    "price_inr": 48000,
+    "stock": 20,
+    "description": "Fluid silk-blend camp collar shirt printed with surreal night palm landscape artwork.",
+    "specs": {
+      "color": "Multi Moonlight",
+      "size": "L",
+      "material": "60% Silk / 40% Cotton",
+      "collar": "Camp Collar"
+    },
+    "tags": "rhude,hawaiianshirt,campcollar,silk,summer",
+    "related": "prod_11,prod_68,prod_12",
+    "image_url": "https://images.unsplash.com/photo-1516257984-b1b4d707412e?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_55",
+    "name": "Supreme Cross Box Logo Tee",
+    "brand": "Supreme",
+    "category": "apparel",
+    "price_inr": 62000,
+    "stock": 19,
+    "description": "Limited holiday release tee displaying two overlapping Supreme red box logos in a cross layout.",
+    "specs": {
+      "color": "White",
+      "size": "M",
+      "material": "100% Cotton",
+      "edition": "FW20 Special Release"
+    },
+    "tags": "supreme,crossboxlogo,white,tee,collectible",
+    "related": "prod_22,prod_35,prod_72",
+    "image_url": "https://images.unsplash.com/photo-1578587018452-892bacefd3f2?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_56",
+    "name": "Off-White Industrial Belt 'Yellow Black'",
+    "brand": "Off-White",
+    "category": "accessories",
+    "price_inr": 39000,
+    "stock": 27,
+    "description": "200cm iconic yellow nylon webbing belt featuring woven red stitching and heavy metal buckle.",
+    "specs": {
+      "color": "Yellow/Black",
+      "length_cm": 200,
+      "material": "Polyester Webbing",
+      "buckle": "Heavy Duty Metal Clasp"
+    },
+    "tags": "offwhite,industrialbelt,yellow,webbing,virgilabloh,statement",
+    "related": "prod_39,prod_67,prod_72",
+    "image_url": "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_57",
+    "name": "Yeezy Gap Flame Logo Cap",
+    "brand": "Yeezy",
+    "category": "accessories",
+    "price_inr": 21000,
+    "stock": 33,
+    "description": "Distressed dad hat styled with flame artwork enveloping the front bill and adjustable back strap.",
+    "specs": {
+      "color": "Black",
+      "size": "Adjustable",
+      "material": "100% Twill Cotton",
+      "closure": "Metal Strap Slider"
+    },
+    "tags": "yeezy,gap,flamecap,hat,distressed,black",
+    "related": "prod_53,prod_73,prod_70",
+    "image_url": "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_58",
+    "name": "Fear of God Essentials Crossbody Bag",
+    "brand": "Fear of God",
+    "category": "accessories",
+    "price_inr": 15000,
+    "stock": 40,
+    "description": "Compact shoulder bag crafted from matte waterproof nylon with rubberized Essentials badge.",
+    "specs": {
+      "color": "Matte Black",
+      "capacity_l": 2.5,
+      "material": "Waterproof Cordura Nylon",
+      "strap": "Adjustable Webbing"
+    },
+    "tags": "fog,essentials,crossbody,bag,minimalist,everyday",
+    "related": "prod_59,prod_43,prod_52",
+    "image_url": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_59",
+    "name": "Supreme Canvas Backpack 'Black'",
+    "brand": "Supreme",
+    "category": "accessories",
+    "price_inr": 21000,
+    "stock": 16,
+    "description": "Durable Cordura ripstop nylon backpack with padded laptop sleeve and large step logo graphic.",
+    "specs": {
+      "color": "Black",
+      "capacity_l": 21,
+      "material": "500D Cordura Nylon",
+      "laptop_sleeve": "15-inch"
+    },
+    "tags": "supreme,backpack,cordura,black,carryall",
+    "related": "prod_09,prod_54,prod_52",
+    "image_url": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_60",
+    "name": "Balenciaga LED Frame Sunglasses",
+    "brand": "Balenciaga",
+    "category": "accessories",
+    "price_inr": 39000,
+    "stock": 11,
+    "description": "Cyberpunk square frames with multi-color illumination LED logo on the left temple arm.",
+    "specs": {
+      "color": "Black/Clear LED",
+      "uv_protection": "UV400 100%",
+      "lens_color": "Grey",
+      "frame_material": "Nylon Acetate"
+    },
+    "tags": "balenciaga,sunglasses,led,cyberpunk,futuristic",
+    "related": "prod_25,prod_46,prod_50",
+    "image_url": "https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_61",
+    "name": "BAPE ABC Camo Duffel Bag",
+    "brand": "BAPE",
+    "category": "accessories",
+    "price_inr": 15000,
+    "stock": 37,
+    "description": "Spacious weekend travel bag coated in green ABC ape camo pattern with leather carry handles.",
+    "specs": {
+      "color": "Green Camo",
+      "capacity_l": 45,
+      "material": "Heavy Canvas",
+      "shoulder_strap": "Removable"
+    },
+    "tags": "bape,duffelbag,travel,abccamo,streetwear",
+    "related": "prod_71,prod_56,prod_12",
+    "image_url": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_62",
+    "name": "Travis Scott Cactus Jack Bucket Hat",
+    "brand": "Travis Scott",
+    "category": "accessories",
+    "price_inr": 28000,
+    "stock": 8,
+    "description": "Washed canvas bucket hat embellished with hand-drawn Cactus Jack portrait embroidery.",
+    "specs": {
+      "color": "Desert Tan",
+      "size": "One Size",
+      "material": "100% Washed Canvas",
+      "brim_width_cm": 6
+    },
+    "tags": "travisscott,cactusjack,buckethat,tan,festival",
+    "related": "prod_40,prod_57,prod_69",
+    "image_url": "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_63",
+    "name": "Yeezy Season 6 Boucl\u00e9 Crew Socks (3-Pack)",
+    "brand": "Yeezy",
+    "category": "accessories",
+    "price_inr": 28000,
+    "stock": 35,
+    "description": "Thick ribbed cotton blend crew socks in trio of earth tones: Taupe, Graphite, and Trench.",
+    "specs": {
+      "colors": "Taupe/Graphite/Trench",
+      "pack_count": 3,
+      "material": "85% Cotton / 13% Polyester / 2% Elastane"
+    },
+    "tags": "yeezy,socks,season6,earthtones,3pack",
+    "related": "prod_01,prod_33,prod_10",
+    "image_url": "https://images.unsplash.com/photo-1622560480605-d83c853bc5c3?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_64",
+    "name": "Off-White Quote Leather Cardholder",
+    "brand": "Off-White",
+    "category": "accessories",
+    "price_inr": 28000,
+    "stock": 14,
+    "description": "Smooth matte leather wallet stamped with Virgil Abloh's ironic 'FOR CARDS' quotation print.",
+    "specs": {
+      "color": "Black/White",
+      "card_slots": 4,
+      "material": "100% Calfskin Leather",
+      "dimensions_cm": "10x7"
+    },
+    "tags": "offwhite,cardholder,wallet,quote,leather",
+    "related": "prod_03,prod_69,prod_15",
+    "image_url": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_65",
+    "name": "Palm Angels Bear Embroidered Baseball Cap",
+    "brand": "Palm Angels",
+    "category": "accessories",
+    "price_inr": 7500,
+    "stock": 35,
+    "description": "Cotton twill cap featuring the decapitated teddy bear plush applique across the front panel.",
+    "specs": {
+      "color": "Black",
+      "size": "Adjustable",
+      "material": "100% Cotton Twill",
+      "applique": "Embroidered Teddy Bear"
+    },
+    "tags": "palmangels,bearcap,baseballhat,black,streetwear",
+    "related": "prod_17,prod_31,prod_72",
+    "image_url": "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_66",
+    "name": "Supreme Red Box Logo Skateboard Deck",
+    "brand": "Supreme",
+    "category": "accessories",
+    "price_inr": 11500,
+    "stock": 26,
+    "description": "7-ply North American maple wood skate deck featuring classic full-length red box logo print.",
+    "specs": {
+      "color": "Red/White",
+      "width_inches": 8.25,
+      "material": "7-Ply Hardrock Maple",
+      "concave": "Medium"
+    },
+    "tags": "supreme,skatedeck,boxlogo,red,maple,hardware",
+    "related": "prod_03,prod_53,prod_27",
+    "image_url": "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_67",
+    "name": "Rhude Rhangelier Silver Chain Necklace",
+    "brand": "Rhude",
+    "category": "accessories",
+    "price_inr": 15000,
+    "stock": 22,
+    "description": "Sterling silver Cuban link chain featuring custom Rhude crest pendant clasp.",
+    "specs": {
+      "color": "Silver",
+      "length_inches": 20,
+      "material": "925 Sterling Silver",
+      "clasp": "Custom Crest Box Lock"
+    },
+    "tags": "rhude,necklace,sterlingsilver,cubanlink,jewelry",
+    "related": "prod_57,prod_42,prod_46",
+    "image_url": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_68",
+    "name": "St\u00fcssy Stock Logo Knit Beanie",
+    "brand": "St\u00fcssy",
+    "category": "accessories",
+    "price_inr": 28000,
+    "stock": 3,
+    "description": "Warm acrylic rib-knit cuff beanie styled with classic white embroidered St\u00fcssy stock logo.",
+    "specs": {
+      "color": "Black",
+      "size": "One Size Fits Most",
+      "material": "100% Acrylic Knit",
+      "cuff": "Folded"
+    },
+    "tags": "stussy,beanie,knitcap,black,winter",
+    "related": "prod_73,prod_57,prod_74",
+    "image_url": "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_69",
+    "name": "Kith Palette 10-Year Anniversary Cap",
+    "brand": "Kith",
+    "category": "accessories",
+    "price_inr": 7500,
+    "stock": 29,
+    "description": "Structured 6-panel cap crafted from premium suede with subtle tonal anniversary branding.",
+    "specs": {
+      "color": "Dusty Rose Suede",
+      "size": "Adjustable Strapback",
+      "material": "100% Goat Suede"
+    },
+    "tags": "kith,cap,suede,anniversary,dustyrose",
+    "related": "prod_71,prod_09,prod_14",
+    "image_url": "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_70",
+    "name": "Yeezy Gap Snake Bag",
+    "brand": "Yeezy",
+    "category": "accessories",
+    "price_inr": 11500,
+    "stock": 8,
+    "description": "Tubular seamless nylon body bag designed to be worn across the torso or folded as a tote.",
+    "specs": {
+      "color": "Black",
+      "material": "100% Matte Waterproof Nylon",
+      "length_cm": 110,
+      "versatility": "Multi-wear"
+    },
+    "tags": "yeezy,gap,snakebag,minimalist,black",
+    "related": "prod_22,prod_24,prod_34",
+    "image_url": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_71",
+    "name": "Fear of God Essentials Leather Tote Bag",
+    "brand": "Fear of God",
+    "category": "accessories",
+    "price_inr": 21000,
+    "stock": 14,
+    "description": "Minimalist open-top tote bag constructed from smooth calfskin with embossed logo detail.",
+    "specs": {
+      "color": "Black",
+      "capacity_l": 18,
+      "material": "100% Full-Grain Leather",
+      "handles": "Dual Shoulder"
+    },
+    "tags": "fog,essentials,totebag,leather,black",
+    "related": "prod_50,prod_05,prod_69",
+    "image_url": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_72",
+    "name": "Oakley x Plantaris Futuristic Sunglasses",
+    "brand": "Nike",
+    "category": "accessories",
+    "price_inr": 7500,
+    "stock": 28,
+    "description": "Biomorphic frame design with removable nose guard and Prizm high-definition optics.",
+    "specs": {
+      "color": "Matte Sand/Prizm Tungsten",
+      "lens_technology": "Prizm Optics",
+      "uv_rating": "UV400"
+    },
+    "tags": "oakley,futuristic,plantaris,sunglasses,gorpcore",
+    "related": "prod_65,prod_41,prod_22",
+    "image_url": "https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_73",
+    "name": "Heron Preston Tape Belt 'Orange'",
+    "brand": "Heron Preston",
+    "category": "accessories",
+    "price_inr": 52000,
+    "stock": 16,
+    "description": "High-visibility orange jacquard logo tape belt with industrial slide buckle fastening.",
+    "specs": {
+      "color": "Industrial Orange",
+      "length_cm": 125,
+      "material": "Polyamide/Polyester",
+      "buckle": "Slide Clamp"
+    },
+    "tags": "heronpreston,belt,orange,tapebelt,workwear",
+    "related": "prod_19,prod_14,prod_40",
+    "image_url": "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_74",
+    "name": "Vetements 'Security' Keychain Lanyard",
+    "brand": "Vetements",
+    "category": "accessories",
+    "price_inr": 28000,
+    "stock": 34,
+    "description": "Heavy duty lanyard strap woven with yellow security lettering and heavy metal carabiner hook.",
+    "specs": {
+      "color": "Safety Yellow/Black",
+      "length_cm": 50,
+      "material": "Nylon Webbing",
+      "attachment": "Steel Carabiner"
+    },
+    "tags": "vetements,lanyard,keychain,security,yellow",
+    "related": "prod_29,prod_50,prod_08",
+    "image_url": "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    "id": "prod_75",
+    "name": "Supreme Zippo Armor Case Lighter 'Gold'",
+    "brand": "Supreme",
+    "category": "accessories",
+    "price_inr": 15000,
+    "stock": 20,
+    "description": "Brass windproof Zippo lighter styled with deep engraved Supreme repeating pattern.",
+    "specs": {
+      "color": "Brass Gold",
+      "material": "Solid Brass",
+      "fuel_type": "Zippo Lighter Fluid (Not Included)"
+    },
+    "tags": "supreme,zippo,lighter,gold,brass,accessory",
+    "related": "prod_49,prod_40,prod_60",
+    "image_url": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=800"
+  }
+]
