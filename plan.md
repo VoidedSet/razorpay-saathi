@@ -28,8 +28,8 @@ Instead of raw JSON dumps or purely conversational text, the interface leverages
 
 The backend orchestration will be built using Python and LangGraph, utilizing a Supervisor (Manager) pattern. 
 
-### A. Store Manager Agent (The Gatekeeper & Auditor)
-*   **Role:** The supervisor node in LangGraph. Coordinates routing between child agents and enforces strict business rules.
+### A. Store Manager Agent (The Gatekeeper, Auditor, & Guardrail)
+*   **Role:** The background supervisor and guardrail. It is **NOT** a chat router. The customer and their agent **never** talk to the Manager. It sits above the chat layer, silently observing, logging, and enforcing strict protocols on every movement made by the Sales, Billing, Marketing, and Support agents.
 *   **Data Access:** Read access to the store's "Balance Sheet" (current profit margins) and "Inventory levels".
 *   **Key Responsibilities:**
     *   **Dynamic Promo Capacity:** Mathematically calculates the maximum allowable discount for a session based on current store profitability.
@@ -41,7 +41,7 @@ The backend orchestration will be built using Python and LangGraph, utilizing a 
 *   **Key Responsibilities:**
     *   **Personalization:** Retrieves the customer's purchase history and browsing profile.
     *   **Revenue Growth (Upselling):** When a user asks for "Shoes", it finds the shoes but also actively cross-sells ("Since you're buying running shoes, would you like to add these moisture-wicking socks for an extra $5?").
-    *   **Handoff:** Formats the final cart JSON and passes the state back to the Manager to route to Billing.
+    *   **Handoff:** Formats the final cart JSON and directly hands over the user to the Billing Agent during checkout.
 
 ### C. Billing Agent (The Checkout Specialist)
 *   **Role:** The financial executioner.

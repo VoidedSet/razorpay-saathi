@@ -4,10 +4,11 @@ main.py — FastAPI entry point.
 /api/chat  →  LangGraph graph  →  astream_events  →  SSE to frontend
 
 SSE event protocol (JSON on each `data:` line):
-  { "type": "audit",  "agent": "Manager Agent", "detail": "...", "model": "...", "ms": 230 }
-  { "type": "token",  "content": "Hello " }
-  { "type": "error",  "message": "..." }
-  { "type": "done",   "session_phase": "checkout" }   ← client persists this
+  { "type": "audit",      "agent": "Manager Agent", "detail": "...", "model": "...", "ms": 230 }
+  { "type": "token",      "content": "Hello " }
+  { "type": "correction", "message": "🔒 Manager policy override: ..." }  ← Manager overrode the response
+  { "type": "error",      "message": "..." }
+  { "type": "done",       "session_phase": "checkout" }   ← client persists this
 """
 
 import json
@@ -42,7 +43,7 @@ app.add_middleware(
 _graph = build_graph()
 
 # ── Node classifications ──────────────────────────────────────────────────────
-_MANAGER_NODES = {"manager_init", "manager_audit"}
+_MANAGER_NODES = {"manager_init", "manager_audit", "sales_tools"}
 _AGENT_NODES   = {"sales_agent", "billing_agent", "support_agent"}
 _ALL_NODES     = _MANAGER_NODES | _AGENT_NODES
 
@@ -83,6 +84,7 @@ async def langgraph_stream(req: ChatRequest):
         "discount_ceiling": 15.0,  # safe default; manager_init will compute real value
         "client_type":      req.client_type,
         "agent_profile":    req.agent_profile,
+        "manager_correction": "",  # set by manager_audit when a response is overridden
     }
 
     def _sse(payload: dict) -> str:
@@ -159,6 +161,13 @@ async def langgraph_stream(req: ChatRequest):
                 # Capture updated session phase from manager_init
                 if name == "manager_init" and "session_phase" in output:
                     final_phase = output["session_phase"]
+
+                # Manager override → surface it to the customer as a distinct event
+                if name == "manager_audit" and output.get("manager_correction"):
+                    yield _sse({
+                        "type":    "correction",
+                        "message": output["manager_correction"],
+                    })
 
                 current_node = None
 

@@ -31,6 +31,7 @@ from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 
 from app.config import get_llm
 from app import db
+from app import guardrails
 
 
 # ── Store Hard Policy Fallback ────────────────────────────────────────────────
@@ -51,6 +52,7 @@ class AgentState(TypedDict):
     discount_ceiling:  float      # max discount % manager has approved for session
     client_type:       str        # "human" | "agent"
     agent_profile:     dict       # A2A: {name, preferences, budget, currency}
+    manager_correction: str       # user-visible Manager override, set by audit when a response is dirty
 
 
 # ── Phase detection (pure function — no LLM) ──────────────────────────────────
@@ -104,7 +106,7 @@ _INJECTION_PATTERNS = [
 
 # ── System prompts ────────────────────────────────────────────────────────────
 
-def _sales_system_prompt(state: AgentState, db_products_text: str, cross_sell_text: str) -> str:
+def _sales_system_prompt(state: AgentState) -> str:
     profile  = state.get("user_profile", {})
     cart     = state.get("cart", [])
     ceiling  = state.get("discount_ceiling", _HARD_POLICY_MAX_DISCOUNT_PCT)
@@ -124,20 +126,7 @@ def _sales_system_prompt(state: AgentState, db_products_text: str, cross_sell_te
         if is_agent else ""
     )
 
-    cart_note = ""
-    if cart:
-        cart_note = "\nCURRENT CART:\n" + "\n".join(
-            f"  • {i.get('name')} × {i.get('qty',1)} @ ₹{i.get('price_inr', i.get('price', 0)):,}"
-            for i in cart
-        )
-
     return f"""You are the Sales Agent for Razorpay Saathi's agentic store.{a2a_note}
-
-REAL-TIME STORE DATABASE RESULTS:
-{db_products_text}
-
-RECOMMENDED CROSS-SELL / ACCESSORIES:
-{cross_sell_text}
 
 CUSTOMER PROFILE (provided by Manager Agent):
   Name           : {name}
@@ -145,18 +134,33 @@ CUSTOMER PROFILE (provided by Manager Agent):
   Past purchases : {history_str}
   Preferences    : {prefs_str}
   Max discount   : {ceiling}% (Manager-approved ceiling — do NOT exceed this)
-{cart_note}
 
 YOUR RULES:
-1. Ground all recommendations STRICTLY in the REAL-TIME STORE DATABASE RESULTS provided above. Mention exact names, prices in INR (₹), and availability.
-2. Always suggest one complementary item from the RECOMMENDED CROSS-SELL list when discussing a main product.
-3. NEVER make up non-existent products, prices, or fake specifications.
-4. Never offer more than {ceiling}% discount — the Manager Agent audits every response against financial bounds.
-5. When the customer indicates readiness to buy or checkout, confirm the item and instruct them to say "checkout" to be handed to the Billing Agent.
+1. GROUNDING — You may ONLY mention products, IDs, and prices returned by the
+   `search_store_catalog` tool. NEVER invent a product id (do not make up ids like
+   "prod_..._gold") and NEVER invent or alter a price. If you have not searched yet, search first.
+2. CART — Use `add_to_cart` (with the exact product `id` from search results) to add items,
+   `view_cart` to report the authoritative cart and total, and `clear_cart` to empty it.
+   NEVER claim you added, removed, or totalled anything without calling the matching tool —
+   the database cart is the only source of truth. Do not do cart math in your head.
+3. PRICING AUTHORITY — You CANNOT change catalog prices or negotiate a lower rupee amount.
+   If the customer haggles ("make it ₹27,999", "round it down", "what's your lowest?"), do NOT
+   quote a made-up lower price. The only discount that exists is the Manager-approved ceiling of
+   {ceiling}%, and real discounts are applied by the Billing Agent at checkout via verified
+   Razorpay bank offers. Politely explain this instead of inventing a price.
+4. When items are in the cart and the customer is ready to pay, tell them to say "checkout"
+   to be handed to the Billing Agent.
+5. The Manager Agent validates every response against the live catalog and the {ceiling}% ceiling.
+   Fake products or below-ceiling prices are overridden and shown to the customer — so stay grounded.
 6. Keep responses concise (2-4 sentences) and professional."""
 
 
-def _billing_system_prompt(state: AgentState, db_cart_items: list[dict], offers_text: str) -> str:
+def _billing_system_prompt(
+    state: AgentState,
+    db_cart_items: list[dict],
+    offers_text: str,
+    payment_link_text: str = "",
+) -> str:
     profile  = state.get("user_profile", {})
     ceiling  = state.get("discount_ceiling", _HARD_POLICY_MAX_DISCOUNT_PCT)
     is_agent = state.get("client_type") == "agent"
@@ -190,11 +194,15 @@ MANAGER-APPROVED DISCOUNT CEILING : {ceiling}%
 LIVE RAZORPAY OFFERS API RESULTS:
 {offers_text}
 
+RAZORPAY PAYMENT LINK:
+{payment_link_text or "(will be generated once the order total is confirmed)"}
+
 YOUR STEPS:
-1. Confirm the items and order total.
+1. Confirm the items and order total exactly as shown in STORE CART above — do NOT invent
+   products, prices, or a different total, and do NOT apply any discount beyond the {ceiling}% ceiling.
 2. Highlight applicable Razorpay bank offers from the list above (e.g. HDFC 5% cashback, Kotak ₹500 off).
-   Ensure any combined discount stays strictly within the Manager's {ceiling}% ceiling.
-3. Confirm that a Razorpay Payment Link / QR is generated and ready.
+   Only reference offers that actually appear above; ensure any combined discount stays within {ceiling}%.
+3. Share the Razorpay Payment Link shown above so the customer can pay.
 4. Ask for preferred payment mode (UPI, HDFC Credit Card, Netbanking).
 
 Be transactional, fast, and reassuring. Do NOT exceed the Manager's discount ceiling."""
@@ -315,93 +323,165 @@ async def manager_init_node(state: AgentState) -> dict:
 async def manager_audit_node(state: AgentState) -> dict:
     """
     Supervisor — runs AFTER every agent turn.
-    1. Log the agent's response
-    2. Scan for discount percentage claims — flag if above ceiling
+
+    Validates the agent's response against the live catalog and the
+    Manager-approved discount ceiling (see guardrails.audit_response):
+      • hallucinated product ids     → blocked
+      • absolute-rupee discounts      → caught (not just literal "N% off")
+      • explicit over-ceiling "N%"    → caught
+    A dirty response also produces a user-visible Manager correction.
     """
     new_entries: list[dict] = []
     notes = list(state.get("manager_notes", []))
+    updates: dict = {}
 
     last_ai = next(
         (m for m in reversed(state["messages"])
-         if hasattr(m, "type") and m.type == "ai"),
+         if hasattr(m, "type") and m.type == "ai" and m.content),
         None,
     )
 
     if last_ai:
-        content = last_ai.content
         ceiling = state.get("discount_ceiling", _HARD_POLICY_MAX_DISCOUNT_PCT)
+        cart    = db.get_cart(state.get("session_id", "default"))
+        audit   = guardrails.audit_response(last_ai.content, ceiling, cart)
 
-        matches = re.findall(
-            r"(\d+(?:\.\d+)?)\s*%\s*(off|discount|cashback|rebate)",
-            content,
-            re.IGNORECASE,
-        )
+        new_entries.extend(guardrails.audit_log_entries(audit, ceiling))
 
-        for amount_str, discount_type in matches:
-            amount = float(amount_str)
-            if amount > ceiling:
-                notes.append(f"VIOLATION: {amount}% {discount_type} exceeds {ceiling}% ceiling")
-                new_entries.append({
-                    "agent":  "Manager Agent",
-                    "detail": (
-                        f"🚨 AUDIT VIOLATION: Agent claimed {amount}% {discount_type} "
-                        f"(ceiling={ceiling}%) — logged for review"
-                    ),
-                })
-            else:
-                new_entries.append({
-                    "agent":  "Manager Agent",
-                    "detail": f"✅ AUDIT: {amount}% {discount_type} within approved {ceiling}% ceiling",
-                })
+        if not audit["clean"]:
+            updates["manager_correction"] = guardrails.build_manager_correction(audit, ceiling)
+            for pid in audit["hallucinated_ids"]:
+                notes.append(f"VIOLATION: hallucinated product {pid}")
+            for v in audit["price_violations"]:
+                notes.append(
+                    f"VIOLATION: {v['name']} quoted ₹{v['quoted']:,} "
+                    f"(≈{v['effective_pct']:g}% > {ceiling:g}% ceiling)"
+                )
+            for v in audit["pct_violations"]:
+                notes.append(f"VIOLATION: {v['pct']:g}% {v['type']} > {ceiling:g}% ceiling")
 
-        if not matches:
-            new_entries.append({
-                "agent":  "Manager Agent",
-                "detail": "✅ AUDIT: Response verified — no policy violations found",
-            })
+    updates["manager_notes"] = notes
+    updates["audit_log"]     = state.get("audit_log", []) + new_entries
+    return updates
 
-    return {
-        "manager_notes": notes,
-        "audit_log":     state.get("audit_log", []) + new_entries,
-    }
 
+def _sales_tools():
+    # We define dummy tool schemas here so bind_tools works.
+    # The actual execution happens in sales_tools_node.
+    def search_store_catalog(query: str):
+        """Searches the real-time store database for products matching the query."""
+        pass
+    def add_to_cart(product_id: str, qty: int = 1):
+        """Adds a specific product to the user's cart. MUST use the exact product 'id' from search results."""
+        pass
+    def view_cart():
+        """Returns the authoritative cart contents and total from the database. Use this before quoting any cart total."""
+        pass
+    def clear_cart():
+        """Removes all items from the user's cart."""
+        pass
+    return [search_store_catalog, add_to_cart, view_cart, clear_cart]
 
 async def sales_agent_node(state: AgentState) -> dict:
     """
     Sales Agent node:
-    Performs RAG product search in SQLite DB based on user's prompt,
-    retrieves cross-sell recommendations, and calls LLM.
+    Uses Native Tool Calling to search SQLite DB and add items to cart.
     """
-    last_msg = state["messages"][-1].content
-    new_entries: list[dict] = []
-
-    # Query DB for products matching message keywords
-    products = db.search_products(last_msg, limit=4)
-    db_text  = db.format_products_for_prompt(products)
-
-    # Query cross-sell recommendations if product found
-    cross_sell = []
-    if products:
-        top_id = products[0]["id"]
-        cross_sell = db.get_related_products(top_id, limit=3)
-    cross_sell_text = db.format_products_for_prompt(cross_sell)
-
-    new_entries.append({
-        "agent":  "Sales Agent",
-        "detail": f"DB Query: search_products('{last_msg[:30]}…') → found {len(products)} item(s)",
-    })
-
-    prompt   = _sales_system_prompt(state, db_text, cross_sell_text)
-    llm      = get_llm()
-    messages = [SystemMessage(content=prompt)] + list(state["messages"])
+    prompt   = _sales_system_prompt(state)
+    llm      = get_llm().bind_tools(_sales_tools())
+    
+    # We don't prepend the system prompt if the last message was a tool result,
+    # to avoid context stuffing, or we can just prepend it safely.
+    # Keep only the last 8 messages to save tokens for Groq limits
+    messages = [SystemMessage(content=prompt)] + list(state["messages"])[-8:]
     response = await llm.ainvoke(messages)
+    
+    new_entries = []
+    if not response.tool_calls:
+        new_entries.append({
+            "agent":  AGENT_LABELS["sales_agent"],
+            "detail": f"Response generated ({len(response.content)} chars)",
+        })
 
     return {
         "messages":  [response],
-        "audit_log": state.get("audit_log", []) + new_entries + [{
-            "agent":  AGENT_LABELS["sales_agent"],
-            "detail": f"Response generated ({len(response.content)} chars)",
-        }],
+        "audit_log": state.get("audit_log", []) + new_entries,
+    }
+
+from langchain_core.messages import ToolMessage
+
+async def sales_tools_node(state: AgentState) -> dict:
+    """
+    Executes tools requested by the Sales Agent (search DB, add to cart).
+    """
+    last_msg = state["messages"][-1]
+    responses = []
+    new_entries = []
+    session_id = state.get("session_id", "default")
+    
+    for call in last_msg.tool_calls:
+        name = call["name"]
+        args = call["args"]
+        
+        if name == "search_store_catalog":
+            query = args.get("query", "")
+            products = db.search_products(query, limit=4)
+            db_text  = db.format_products_for_prompt(products)
+            
+            if products:
+                cross_sell = db.get_related_products(products[0]["id"], limit=3)
+                if cross_sell:
+                    db_text += f"\n\nRECOMMENDED CROSS-SELL / ACCESSORIES:\n{db.format_products_for_prompt(cross_sell)}"
+            
+            responses.append(ToolMessage(content=db_text, tool_call_id=call["id"], name=name))
+            new_entries.append({
+                "agent": "Sales Agent",
+                "detail": f"🛠️ Tool Call: search_store_catalog('{query[:20]}') → found {len(products)} item(s)",
+            })
+            
+        elif name == "add_to_cart":
+            product_id = args.get("product_id", "")
+            qty = args.get("qty", 1)
+            success = db.add_to_cart(session_id, product_id, qty)
+            if success:
+                msg = f"Successfully added {qty}x {product_id} to cart."
+            else:
+                msg = f"Failed: product {product_id} not found in database."
+                
+            responses.append(ToolMessage(content=msg, tool_call_id=call["id"], name=name))
+            new_entries.append({
+                "agent": "Sales Agent",
+                "detail": f"🛠️ Tool Call: add_to_cart('{product_id}', {qty}) → {'Success' if success else 'Failed'}",
+            })
+
+        elif name == "view_cart":
+            cart_items = db.get_cart(session_id)
+            if cart_items:
+                total = sum(i.get("price_inr", 0) * i.get("qty", 1) for i in cart_items)
+                lines = "\n".join(
+                    f"  • [{i['id']}] {i['name']} × {i.get('qty', 1)} @ ₹{i['price_inr']:,}"
+                    for i in cart_items
+                )
+                msg = f"CART ({len(cart_items)} item(s)):\n{lines}\n  TOTAL: ₹{total:,}"
+            else:
+                msg = "Cart is empty."
+            responses.append(ToolMessage(content=msg, tool_call_id=call["id"], name=name))
+            new_entries.append({
+                "agent": "Sales Agent",
+                "detail": f"🛠️ Tool Call: view_cart() → {len(cart_items)} item(s)",
+            })
+
+        elif name == "clear_cart":
+            db.clear_cart(session_id)
+            responses.append(ToolMessage(content="Cart cleared.", tool_call_id=call["id"], name=name))
+            new_entries.append({
+                "agent": "Sales Agent",
+                "detail": "🛠️ Tool Call: clear_cart() → cart emptied",
+            })
+
+    return {
+        "messages": responses,
+        "audit_log": state.get("audit_log", []) + new_entries,
     }
 
 
@@ -414,15 +494,9 @@ async def billing_agent_node(state: AgentState) -> dict:
     new_entries = []
 
     # Fetch real cart items from DB
-    cart_items = db.get_cart(session_id) or state.get("cart", [])
+    cart_items = db.get_cart(session_id)
     
-    # If cart empty in DB, try to extract items discussed in chat context
-    if not cart_items:
-        # Check last messages for products
-        context_str = " ".join([m.content for m in state["messages"][-4:]])
-        matched = db.search_products(context_str, limit=2)
-        if matched:
-            cart_items = [{"name": p["name"], "price_inr": p["price_inr"], "qty": 1} for p in matched]
+    # We no longer guess cart from chat context; cart_items is authoritative from the add_to_cart tool.
 
     total_amount = sum(i.get("price_inr", i.get("price", 0)) * i.get("qty", 1) for i in cart_items)
     
@@ -435,7 +509,17 @@ async def billing_agent_node(state: AgentState) -> dict:
         "detail": f"Razorpay API: fetched {len(offers)} bank offer(s) for ₹{total_amount:,} order",
     })
 
-    prompt   = _billing_system_prompt(state, cart_items, offers_text)
+    # Generate a Razorpay Payment Link for the confirmed total (mocked in db.py)
+    payment_link_text = ""
+    if total_amount > 0:
+        link = db.get_payment_link(session_id, total_amount)
+        payment_link_text = db.format_payment_link_for_prompt(link)
+        new_entries.append({
+            "agent":  "Billing Agent",
+            "detail": f"Razorpay API: payment link {link['id']} → {link['short_url']} (₹{total_amount:,})",
+        })
+
+    prompt   = _billing_system_prompt(state, cart_items, offers_text, payment_link_text)
     llm      = get_llm()
     messages = [SystemMessage(content=prompt)] + list(state["messages"])
     response = await llm.ainvoke(messages)
@@ -474,6 +558,13 @@ def route_to_agent(
     }.get(state.get("session_phase", "browsing"), "sales_agent")
 
 
+def sales_should_continue(state: AgentState):
+    """If the Sales Agent invoked tools, route to the tool executor."""
+    last_msg = state["messages"][-1]
+    if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
+        return "sales_tools"
+    return "manager_audit"
+
 # ── Graph ─────────────────────────────────────────────────────────────────────
 
 def build_graph() -> StateGraph:
@@ -482,6 +573,7 @@ def build_graph() -> StateGraph:
     g.add_node("manager_init",  manager_init_node)
     g.add_node("manager_audit", manager_audit_node)
     g.add_node("sales_agent",   sales_agent_node)
+    g.add_node("sales_tools",   sales_tools_node)
     g.add_node("billing_agent", billing_agent_node)
     g.add_node("support_agent", support_agent_node)
 
@@ -497,8 +589,15 @@ def build_graph() -> StateGraph:
         },
     )
 
-    for agent in ("sales_agent", "billing_agent", "support_agent"):
-        g.add_edge(agent, "manager_audit")
+    # Sales Agent can loop through tools before going to audit
+    g.add_conditional_edges("sales_agent", sales_should_continue, {
+        "sales_tools":   "sales_tools",
+        "manager_audit": "manager_audit",
+    })
+    g.add_edge("sales_tools", "sales_agent")
+
+    g.add_edge("billing_agent", "manager_audit")
+    g.add_edge("support_agent", "manager_audit")
 
     g.add_edge("manager_audit", END)
 

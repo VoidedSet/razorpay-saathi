@@ -12,6 +12,7 @@ All writes go through helper functions so graph nodes never touch SQL directly.
 
 import sqlite3
 import json
+import hashlib
 from pathlib import Path
 from typing import Optional
 
@@ -519,6 +520,52 @@ def get_razorpay_offers(amount_inr: int) -> list[dict]:
             "offer_code": "ICICIEMI3",
         })
     return offers
+
+
+# ── Razorpay Payment Links (mock) ──────────────────────────────────────────────
+
+def get_payment_link(
+    session_id: str,
+    amount_inr: int,
+    description: str = "Razorpay Saathi order",
+) -> dict:
+    """
+    Mock of the Razorpay Payment Links API.
+
+    Swap-in for the real SDK once RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET are set:
+
+        import razorpay
+        client = razorpay.Client(auth=(KEY_ID, KEY_SECRET))
+        link = client.payment_link.create({
+            "amount":      amount_inr * 100,   # Razorpay works in paise
+            "currency":    "INR",
+            "description": description,
+            "notes":       {"session_id": session_id},
+        })
+        return {"id": link["id"], "short_url": link["short_url"], ...}
+
+    The mock derives a stable token from (session_id, amount) so the same cart
+    always yields the same link — deterministic and demo-friendly.
+    """
+    token = hashlib.sha1(f"{session_id}:{amount_inr}".encode()).hexdigest()[:10]
+    return {
+        "id":           f"plink_{token}",
+        "short_url":    f"https://rzp.io/i/{token}",
+        "amount":       amount_inr,
+        "amount_paise": amount_inr * 100,
+        "currency":     "INR",
+        "status":       "created",
+        "description":  description,
+        "mock":         True,
+    }
+
+
+def format_payment_link_for_prompt(link: dict) -> str:
+    """Format a payment link into a concise LLM-readable line."""
+    return (
+        f"Razorpay Payment Link generated → {link['short_url']} "
+        f"(id: {link['id']}, amount: ₹{link['amount']:,}, status: {link['status']})"
+    )
 
 
 def format_products_for_prompt(products: list[dict]) -> str:

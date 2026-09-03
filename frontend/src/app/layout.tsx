@@ -5,7 +5,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "Razorpay Saathi — Agentic Store",
+  title: "hesprints — Agentic Store",
   description:
     "A multi-agent AI commerce assistant powered by LangGraph and Razorpay. " +
     "Featuring a Sales Agent, Billing Agent, and Promo Agent orchestrated by a Store Manager.",

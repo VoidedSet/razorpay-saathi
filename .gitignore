@@ -7,6 +7,10 @@ venv/
 *.egg-info/
 .env
 
+# Generated data / logs
+*.db
+*.log
+
 # Node
 node_modules/
 .next/
@@ -20,3 +24,5 @@ node_modules/
 # IDE
 .vscode/
 .idea/
+
+mockup-*
