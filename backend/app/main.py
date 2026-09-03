@@ -46,9 +46,13 @@ _ALL_NODES   = {"manager"} | _AGENT_NODES
 # ── Request schema ────────────────────────────────────────────────────────────
 
 class ChatRequest(BaseModel):
-    message: str
-    session_id: str = "default"
-    history: list[dict] = []   # [{role: "user"|"assistant", content: "..."}]
+    message:       str
+    session_id:    str        = "default"
+    history:       list[dict] = []  # [{role: "user"|"assistant", content: "..."}]
+    # ── A2A / personalization fields ─────────────────────────────────────────
+    client_type:   str        = "human"  # "human" | "agent"
+    cart:          list[dict] = []       # [{name, qty, price, currency}]
+    agent_profile: dict       = {}       # A2A: {name, preferences, budget, currency}
 
 
 # ── SSE stream generator ──────────────────────────────────────────────────────
@@ -70,9 +74,12 @@ async def langgraph_stream(req: ChatRequest):
             history_messages.append(AIMessage(content=turn["content"]))
 
     initial_state: AgentState = {
-        "messages":   history_messages + [HumanMessage(content=req.message)],
-        "next_agent": "",
-        "audit_log":  [],
+        "messages":      history_messages + [HumanMessage(content=req.message)],
+        "next_agent":    "",
+        "audit_log":     [],
+        "client_type":   req.client_type,
+        "cart":          req.cart,
+        "agent_profile": req.agent_profile,
     }
 
     def _sse(payload: dict) -> str:
@@ -98,20 +105,22 @@ async def langgraph_stream(req: ChatRequest):
                 node_start_times[name] = time.monotonic()
                 label = AGENT_LABELS.get(name, name)
 
-                # For agent nodes, show what message is being forwarded to them
+                # For agent nodes, show forwarded context + client type
                 comm_detail = None
                 if name in _AGENT_NODES:
-                    inp = data.get("input", {})
-                    msgs = inp.get("messages", [])
-                    n_ctx = len(msgs)
+                    inp    = data.get("input", {})
+                    msgs   = inp.get("messages", [])
+                    n_ctx  = len(msgs)
                     last_human = next(
                         (m.content[:80] + "…" if len(m.content) > 80 else m.content
                          for m in reversed(msgs)
                          if hasattr(m, "type") and m.type == "human"),
                         None,
                     )
-                    comm_detail = f"Received {n_ctx} msg(s) in context" + (
-                        f' | Last: "{last_human}"' if last_human else ""
+                    client_tag = f"[{req.client_type}] " if req.client_type == "agent" else ""
+                    comm_detail = (
+                        f"{client_tag}ctx={n_ctx} msgs"
+                        + (f' | "{last_human}"' if last_human else "")
                     )
 
                 yield _sse({
