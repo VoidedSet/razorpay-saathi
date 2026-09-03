@@ -48,6 +48,7 @@ interface ProductCardProps {
   price: number;
   currency: string;
   description: string;
+  image?: string;
   stock: number;
   specs: { label: string; value: string }[];
   recommended?: boolean;
@@ -135,7 +136,7 @@ const PRODUCTS: Product[] = [
     title: "TSS Originals: Urban High-Tops",
     category: "court",
     price: 130,
-    image: "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1709121543_9876543.jpg?w=1080&dpr=2",
+    image: "https://images.unsplash.com/photo-1512374382149-233c42b6a83b?w=600&auto=format&fit=crop",
     description: "High-top silhouette engineered for urban court performance and retro street aesthetics.",
   },
   {
@@ -143,7 +144,7 @@ const PRODUCTS: Product[] = [
     title: "Supersonic: Cyber Neon",
     category: "running",
     price: 105,
-    image: "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1715423891_4492100.jpg?w=1080&dpr=2",
+    image: "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&auto=format&fit=crop",
     description: "Dynamic cushioned running sneakers with vibrant neon accents and responsive foam midsoles.",
   },
   {
@@ -151,7 +152,7 @@ const PRODUCTS: Product[] = [
     title: "Vintage 77: Classic Canvas",
     category: "classics",
     price: 75,
-    image: "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1698231012_5541299.jpg?w=1080&dpr=2",
+    image: "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?w=600&auto=format&fit=crop",
     description: "Timeless low-profile canvas sneakers crafted for everyday effortless style and comfort.",
   },
   {
@@ -159,7 +160,7 @@ const PRODUCTS: Product[] = [
     title: "Apex: Stealth Black",
     category: "vintage",
     price: 115,
-    image: "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1721094833_8829104.jpg?w=1080&dpr=2",
+    image: "https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?w=600&auto=format&fit=crop",
     description: "Matte black stealth finish with genuine suede overlays and high-traction rubber outsole.",
   },
 ];
@@ -338,9 +339,18 @@ function ProductCard({ props, onViewDetail }: { props: ProductCardProps; onViewD
   return (
     <div className={`gen-product-card ${props.recommended ? "gen-product-card-recommended" : ""}`}>
       {props.recommended && <span className="gen-recommended-badge">Recommended</span>}
-      <div className="gen-product-monogram" onClick={() => onViewDetail(props)}>
-        {initials}
-      </div>
+      {props.image ? (
+        <img
+          src={props.image}
+          alt={props.name}
+          className="gen-product-img"
+          onClick={() => onViewDetail(props)}
+        />
+      ) : (
+        <div className="gen-product-monogram" onClick={() => onViewDetail(props)}>
+          {initials}
+        </div>
+      )}
       <div className="gen-product-info">
         <div className="gen-product-meta">
           <span className="gen-product-brand">{props.brand}</span>
@@ -449,7 +459,7 @@ function ProductDetailModal({
   product,
   onClose,
 }: {
-  product: { name: string; brand: string; category: string; price: number; currency: string; description: string; specs: { label: string; value: string }[] } | null;
+  product: { name: string; brand: string; category: string; price: number; currency: string; description: string; image?: string; specs: { label: string; value: string }[] } | null;
   onClose: () => void;
 }) {
   useEffect(() => {
@@ -466,11 +476,17 @@ function ProductDetailModal({
       <div className="product-detail-modal" onClick={(e) => e.stopPropagation()}>
         <button className="close-btn modal-close" onClick={onClose}>✕</button>
         <div className="detail-modal-body">
-          <div className="detail-modal-monogram">
-            {product.brand
-              ? product.brand.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()
-              : product.name.slice(0, 2).toUpperCase()}
-          </div>
+          {product.image ? (
+            <div className="detail-modal-img">
+              <img src={product.image} alt={product.name} />
+            </div>
+          ) : (
+            <div className="detail-modal-monogram">
+              {product.brand
+                ? product.brand.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()
+                : product.name.slice(0, 2).toUpperCase()}
+            </div>
+          )}
           <div className="detail-modal-info">
             <div className="gen-product-meta" style={{ marginBottom: "0.4rem" }}>
               <span className="gen-product-brand">{product.brand}</span>
@@ -493,6 +509,53 @@ function ProductDetailModal({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Curated Selection Auto-scrolling Vertical Carousel ────────────────────────
+function CuratedSelectionCarousel({
+  products,
+  onSelectProduct,
+}: {
+  products: Product[];
+  onSelectProduct: (p: Product) => void;
+}) {
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const [isPaused, setIsPaused] = useState(false);
+
+  useEffect(() => {
+    if (isPaused) return;
+    const interval = setInterval(() => {
+      const el = carouselRef.current;
+      if (!el) return;
+      const isAtBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 15;
+      if (isAtBottom) {
+        el.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        el.scrollBy({ top: 70, behavior: "smooth" });
+      }
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [isPaused]);
+
+  return (
+    <div
+      ref={carouselRef}
+      className="vertical-carousel"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      {products.map((p) => (
+        <div key={p.id} className="carousel-card" onClick={() => onSelectProduct(p)}>
+          <img src={p.image} alt={p.title} className="rec-shoe-img" />
+          <div className="carousel-card-info">
+            <h4 className="rec-shoe-title">{p.title}</h4>
+            <div className="rec-shoe-price">${p.price}</div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -799,20 +862,10 @@ export default function Home() {
           </main>
 
           <aside className="agent-right-panel">
-            {/* Curated Selection: Vertical Carousel */}
+            {/* Curated Selection: Auto-scrolling Vertical Carousel */}
             <div className="panel-card">
               <h3 className="panel-card-title">Curated Selection</h3>
-              <div className="vertical-carousel">
-                {PRODUCTS.map((p) => (
-                  <div key={p.id} className="carousel-card" onClick={() => setActiveProduct(p)}>
-                    <img src={p.image} alt={p.title} className="rec-shoe-img" />
-                    <div>
-                      <h4 className="rec-shoe-title">{p.title}</h4>
-                      <div className="rec-shoe-price">${p.price}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <CuratedSelectionCarousel products={PRODUCTS} onSelectProduct={(p) => setActiveProduct(p)} />
             </div>
 
             {/* Cart Summary with Item Thumbnail Icons */}
@@ -832,12 +885,14 @@ export default function Home() {
                 {cart.length === 0 ? (
                   <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Cart is empty.</p>
                 ) : (
-                  cart.map((i) => (
-                    <div key={i.product.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                      <span>{i.product.title} (x{i.quantity})</span>
-                      <span style={{ fontWeight: 700 }}>${(i.appliedPrice * i.quantity).toFixed(2)}</span>
-                    </div>
-                  ))
+                  <div className="panel-cart-items-list">
+                    {cart.map((i) => (
+                      <div key={i.product.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                        <span>{i.product.title} (x{i.quantity})</span>
+                        <span style={{ fontWeight: 700 }}>${(i.appliedPrice * i.quantity).toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
                 )}
                 <div style={{ borderTop: "1px dashed var(--border-warm)", paddingTop: 8, marginTop: 8, display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
                   <span>Total:</span>

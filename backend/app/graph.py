@@ -279,7 +279,7 @@ def _product_card_props(product: dict, recommended: bool = False) -> dict:
         "category":    product.get("category", ""),
         "price":       product["price_inr"],
         "currency":    "INR",
-        "image":       product.get("image_url") or "",   # no image column yet → monogram fallback
+        "image":       product.get("image_url") or product.get("image") or "",
         "description": product.get("description", ""),
         "stock":       product.get("stock", 0),
         "specs":       spec_items,

@@ -31,7 +31,8 @@ CREATE TABLE IF NOT EXISTS products (
     description TEXT,
     specs       TEXT,     -- JSON dict of key specs
     tags        TEXT,     -- comma-separated search tags
-    related     TEXT      -- comma-separated product IDs for cross-sell
+    related     TEXT,     -- comma-separated product IDs for cross-sell
+    image_url   TEXT      -- URL of product image
 );
 
 CREATE TABLE IF NOT EXISTS users (
@@ -76,6 +77,7 @@ _PRODUCTS = [
         "specs": json.dumps({"style": "Retro Runner", "upper": "Breathable Mesh & Suede", "sole": "Wave Foam Cushioning"}),
         "tags": "vintage,retro,miami,souled,sneaker,beach,lifestyle",
         "related": "prod_shoe_mafia,prod_shoe_yoda,prod_shoe_ghost",
+        "image_url": "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1743521912_7639983.jpg?w=480&dpr=2",
     },
     {
         "id": "prod_shoe_mafia",
@@ -88,6 +90,7 @@ _PRODUCTS = [
         "specs": json.dumps({"style": "Slip-on Mule", "upper": "Genuine Leather", "sole": "High-Rebound Comfort Sole"}),
         "tags": "court,mules,mafia,slipon,cinema,stylish",
         "related": "prod_shoe_miami,prod_shoe_yoda",
+        "image_url": "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1761894000_9908200.jpg?w=1080&dpr=2",
     },
     {
         "id": "prod_shoe_yoda",
@@ -100,6 +103,7 @@ _PRODUCTS = [
         "specs": json.dumps({"style": "High Top Classic", "upper": "Canvas & Leather", "sole": "Gum Rubber Outsole"}),
         "tags": "classics,yoda,green,galaxy,hightop,iconic",
         "related": "prod_shoe_ghost,prod_shoe_miami",
+        "image_url": "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1759387261_3013866.jpg?w=1080&dpr=2",
     },
     {
         "id": "prod_shoe_ghost",
@@ -112,6 +116,7 @@ _PRODUCTS = [
         "specs": json.dumps({"style": "Foam Runner", "upper": "Ergonomic Cutouts", "sole": "Ultra-light EVA"}),
         "tags": "running,ghost,hydros,white,minimalist,urban",
         "related": "prod_shoe_cyber,prod_shoe_miami",
+        "image_url": "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1754742095_6028923.jpg?w=1080&dpr=2",
     },
     {
         "id": "prod_shoe_hightop",
@@ -124,6 +129,7 @@ _PRODUCTS = [
         "specs": json.dumps({"style": "Retro High-Top", "upper": "Full Grain Leather", "sole": "Traction Rubber"}),
         "tags": "court,hightop,urban,originals,basketball,streetwear",
         "related": "prod_shoe_mafia,prod_shoe_stealth",
+        "image_url": "https://images.unsplash.com/photo-1512374382149-233c42b6a83b?w=600&auto=format&fit=crop",
     },
     {
         "id": "prod_shoe_cyber",
@@ -136,6 +142,7 @@ _PRODUCTS = [
         "specs": json.dumps({"style": "Performance Runner", "upper": "Engineered Knit", "sole": "Responsive Foam Midsoles"}),
         "tags": "running,cyber,neon,supersonic,sport,cushion",
         "related": "prod_shoe_ghost,prod_shoe_miami",
+        "image_url": "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&auto=format&fit=crop",
     },
     {
         "id": "prod_shoe_canvas",
@@ -148,6 +155,7 @@ _PRODUCTS = [
         "specs": json.dumps({"style": "Low-Top Canvas", "upper": "Unbleached Canvas", "sole": "Vulcanized Rubber Trim"}),
         "tags": "classics,canvas,vintage77,everyday,lowtop,casual",
         "related": "prod_shoe_yoda,prod_shoe_ghost",
+        "image_url": "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?w=600&auto=format&fit=crop",
     },
     {
         "id": "prod_shoe_stealth",
@@ -160,6 +168,7 @@ _PRODUCTS = [
         "specs": json.dumps({"style": "Stealth Trainer", "upper": "Matte Suede & Synthetic", "sole": "High-Traction Rubber"}),
         "tags": "vintage,stealth,black,apex,suede,matte",
         "related": "prod_shoe_miami,prod_shoe_hightop",
+        "image_url": "https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?w=600&auto=format&fit=crop",
     },
 ]
 
@@ -242,7 +251,7 @@ def init_db(force_reseed: bool = True) -> None:
 def _seed(db: sqlite3.Connection) -> None:
     db.executemany(
         "INSERT OR IGNORE INTO products VALUES (:id,:name,:brand,:category,"
-        ":price_inr,:stock,:description,:specs,:tags,:related)",
+        ":price_inr,:stock,:description,:specs,:tags,:related,:image_url)",
         _PRODUCTS,
     )
     db.executemany(
