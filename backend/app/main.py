@@ -21,8 +21,12 @@ from dotenv import load_dotenv
 
 from app.graph import build_graph, AgentState, AGENT_LABELS
 from app.config import active_config
+from app.db import init_db
 
 load_dotenv()
+
+# Initialize SQLite database schema and seed data
+init_db()
 
 app = FastAPI(title="Razorpay Saathi — Agentic Store Backend")
 
@@ -48,6 +52,7 @@ _ALL_NODES     = _MANAGER_NODES | _AGENT_NODES
 class ChatRequest(BaseModel):
     message:       str
     session_id:    str        = "default"
+    user_id:       str        = "usr_001"
     history:       list[dict] = []    # [{role, content}]
     session_phase: str        = "browsing"  # persisted by client from done event
     # A2A / personalization
@@ -68,6 +73,8 @@ async def langgraph_stream(req: ChatRequest):
 
     initial_state: AgentState = {
         "messages":         history_messages + [HumanMessage(content=req.message)],
+        "session_id":       req.session_id,
+        "user_id":          req.user_id,
         "session_phase":    req.session_phase,
         "user_profile":     {},    # manager_init will populate on first turn
         "cart":             req.cart,
