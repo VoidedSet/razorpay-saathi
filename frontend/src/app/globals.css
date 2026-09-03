@@ -76,6 +76,18 @@ html, body {
   font-family: monospace;
 }
 
+/* Session phase chip */
+.phase-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid;
+}
+.phase-browsing  { background: #0f2a1a; color: #34d399; border-color: #065f46; }
+.phase-checkout  { background: #1e1040; color: #a78bfa; border-color: #4c1d95; }
+.phase-support   { background: #1a1506; color: #fbbf24; border-color: #78350f; }
+
 /* ── Messages ── */
 .chat-messages {
   flex: 1;

@@ -35,9 +35,10 @@ interface Message {
 
 // ── Chat hook ─────────────────────────────────────────────────────────────────
 function useAgentChat() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [streaming, setStreaming] = useState(false);
+  const [messages, setMessages]       = useState<Message[]>([]);
+  const [input, setInput]             = useState("");
+  const [streaming, setStreaming]     = useState(false);
+  const [sessionPhase, setPhase]      = useState("browsing");  // persisted from done events
 
   const sendMessage = async (text: string, currentMessages: Message[]) => {
     if (!text.trim() || streaming) return;
@@ -63,7 +64,7 @@ function useAgentChat() {
       const res = await fetch("http://localhost:8000/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history }),
+        body: JSON.stringify({ message: text, history, session_phase: sessionPhase }),
       });
 
       if (!res.ok) {
@@ -99,6 +100,9 @@ function useAgentChat() {
               msg.content += event.content;
             } else if (event.type === "error") {
               msg.content = `⚠️ Agent error: ${event.message}`;
+            } else if (event.type === "done") {
+              // Persist session phase for next request
+              if (event.session_phase) setPhase(event.session_phase);
             }
             next[next.length - 1] = msg;
             return next;
@@ -120,7 +124,7 @@ function useAgentChat() {
     }
   };
 
-  return { messages, input, setInput, streaming, sendMessage };
+  return { messages, input, setInput, streaming, sessionPhase, sendMessage };
 }
 
 // ── Components ────────────────────────────────────────────────────────────────
@@ -214,7 +218,7 @@ function ChatBubble({ msg }: { msg: Message }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function Home() {
-  const { messages, input, setInput, streaming, sendMessage } = useAgentChat();
+  const { messages, input, setInput, streaming, sessionPhase, sendMessage } = useAgentChat();
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -233,6 +237,9 @@ export default function Home() {
         <h1 className="chat-title">Razorpay Saathi</h1>
         <span className="chat-subtitle">Agentic Store Assistant</span>
         <ActiveModelBadge />
+        <span className={`phase-chip phase-${sessionPhase}`}>
+          {sessionPhase === "browsing" ? "🛍 Browsing" : sessionPhase === "checkout" ? "💳 Checkout" : "🎧 Support"}
+        </span>
       </header>
 
       <main className="chat-messages">

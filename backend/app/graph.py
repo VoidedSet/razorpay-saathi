@@ -1,289 +1,462 @@
 """
-graph.py — LangGraph multi-agent graph (Supervisor pattern).
+graph.py — LangGraph multi-agent supervisor graph.
 
-Routing priority:
-  1. Keyword match  (fast, deterministic — e.g. "checkout" → billing_agent)
-  2. LLM routing    (flexible, for ambiguous messages)
-  3. Safe default   → sales_agent
+Architecture (from design doc):
 
-A2A support:
-  Pass client_type="agent" + agent_profile={name, budget, preferences, currency}
-  in the API request. System prompts adapt automatically.
+                    ┌────────────────────────────────┐
+                    │        Manager Agent            │
+                    │  (Supervisor — never visible    │
+                    │   to user, always watching)     │
+                    └──────┬──────────────────────────┘
+              oversees ↕   ↕   ↕   ↕
+     ┌──────────────┐  ┌───────────────┐  ┌───────────────┐  ┌─────────────────┐
+     │  Sales Agent │←→│ Billing Agent │  │Marketing Agent│  │ Support Agent   │
+     └──────────────┘  └───────────────┘  │(async/outbound│  │(direct access)  │
+                                           │not in chat UI)│  └─────────────────┘
+                                           └───────────────┘
+
+User flow:
+  1. User/Agent enters → manager_init fetches profile, sets discount ceiling
+  2. User talks ONLY to Sales Agent (browsing, recommendations, upsell)
+  3. When cart finalised → Sales Agent hands off → Billing Agent
+  4. Billing Agent: Razorpay Offers API → discount → Payment Link
+  5. manager_audit always runs AFTER agent: logs response, flags violations
+
+The Manager is NOT a router. It is a supervisor with guardrails.
+Phase (browsing/checkout/support) is derived from conversation state — not LLM.
+Marketing Agent is async/outbound only (not in this conversational graph).
 """
 
+import re
 from typing import TypedDict, Annotated, Literal
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 
-from app.config import get_llm, get_routing_llm
+from app.config import get_llm
+
+
+# ── Mock data (replaced by SQLite in next step) ───────────────────────────────
+
+_MOCK_PROFILES: dict[str, dict] = {
+    "usr_default": {
+        "user_id":           "usr_001",
+        "name":              "Alex",
+        "tier":              "gold",
+        "purchase_history":  ["Samsung Galaxy S10", "AirPods Pro", "Mi Band 6"],
+        "preferences":       ["electronics", "Samsung", "premium"],
+        "total_spend_inr":   145_000,
+        "discount_ceiling_pct": 10,   # manager-approved max for this user
+    },
+    "agent_default": {
+        "user_id":           "agt_001",
+        "name":              "Automated Agent",
+        "tier":              "enterprise",
+        "purchase_history":  [],
+        "preferences":       [],
+        "total_spend_inr":   0,
+        "discount_ceiling_pct": 5,
+    },
+}
+
+_STORE_POLICY = {
+    "max_discount_pct":          15,    # hard ceiling — no agent can exceed this
+    "min_order_for_discount_inr": 5_000,
+}
 
 
 # ── State ─────────────────────────────────────────────────────────────────────
 
 class AgentState(TypedDict):
-    messages:      Annotated[list, add_messages]
-    next_agent:    str
-    audit_log:     list[dict]
-    client_type:   str         # "human" | "agent"
-    cart:          list[dict]  # [{name, qty, price, currency}]
-    agent_profile: dict        # A2A: {name, preferences, budget, currency}
+    messages:          Annotated[list, add_messages]  # full conversation
+    session_phase:     str        # "browsing" | "checkout" | "support"
+    user_profile:      dict       # loaded by manager_init on first turn
+    cart:              list[dict] # [{name, qty, price, currency}]
+    audit_log:         list[dict] # running log of all agent actions
+    manager_notes:     list[str]  # guardrail flags accumulated by manager
+    discount_ceiling:  float      # max discount % manager has approved for session
+    client_type:       str        # "human" | "agent"
+    agent_profile:     dict       # A2A: {name, preferences, budget, currency}
 
 
-# ── Routing helpers ───────────────────────────────────────────────────────────
+# ── Phase detection (pure function — no LLM) ──────────────────────────────────
 
-# Checked BEFORE the LLM routing call. Order matters — first match wins.
-_KEYWORD_ROUTES: list[tuple[str, list[str]]] = [
-    ("billing_agent", [
-        "checkout", "check out", "pay now", "proceed to pay", "i want to pay",
-        "buy now", "place order", "complete purchase", "make payment",
-        "proceed with purchase", "ready to buy", "i want to purchase",
-        "proceed to purchase", "i want to buy", "want to order",
-    ]),
-    ("promo_agent", [
-        "promo", "promotion", "coupon", "run campaign", "outreach",
-        "best deal", "any deal", "any offer", "get a discount",
-    ]),
+_CHECKOUT_KEYWORDS = [
+    "checkout", "check out", "pay now", "proceed to pay", "i want to pay",
+    "buy now", "place order", "complete purchase", "make payment",
+    "ready to buy", "i want to purchase", "i want to buy", "want to order",
+    "proceed to purchase", "proceed with purchase",
 ]
 
-_MANAGER_ROUTING_PROMPT = """\
-Your only job: route the message to one agent. Reply with EXACTLY one of these \
-three strings — nothing else, no punctuation, no explanation:
+_SUPPORT_KEYWORDS = [
+    "support", "customer care", "complaint", "issue with my order",
+    "return", "refund", "exchange", "my order is wrong",
+]
 
-sales_agent
-billing_agent
-promo_agent
+_BACK_TO_BROWSE_KEYWORDS = [
+    "continue shopping", "add more", "keep browsing", "show me more",
+    "back to shopping",
+]
 
-Rules:
-- sales_agent   → browsing, product questions, recommendations, general chat
-- billing_agent → checkout, payment, buy now, place order, complete purchase
-- promo_agent   → deal requests, coupons, promotions, campaign creation
-
-Message: {message}
-Reply:"""
-
-
-def _keyword_route(message: str) -> str | None:
-    """O(n) keyword scan — checked before the LLM to catch obvious cases."""
+def _detect_phase(message: str, current_phase: str) -> str:
+    """
+    Deterministic phase detection. No LLM involved.
+    Priority: checkout > support > back-to-browse > keep current > default browsing
+    """
     msg = message.lower()
-    for agent, keywords in _KEYWORD_ROUTES:
-        if any(kw in msg for kw in keywords):
-            return agent
-    return None
+    if any(kw in msg for kw in _CHECKOUT_KEYWORDS):
+        return "checkout"
+    if any(kw in msg for kw in _SUPPORT_KEYWORDS):
+        return "support"
+    if any(kw in msg for kw in _BACK_TO_BROWSE_KEYWORDS):
+        return "browsing"
+    # Sticky: once in checkout or support, stay unless explicitly switching
+    if current_phase in ("checkout", "support"):
+        return current_phase
+    return "browsing"
 
 
-def _parse_routing_response(text: str) -> str:
-    """
-    Robustly extract agent name from potentially messy LLM output.
-    Small models often add punctuation, caveats, or extra words.
-    """
-    text = text.lower().strip().rstrip(".")
-    valid = {"sales_agent", "billing_agent", "promo_agent"}
+# ── Guardrail patterns ────────────────────────────────────────────────────────
 
-    if text in valid:
-        return text
-
-    # Substring match — handles "I would say: billing_agent" etc.
-    for agent in valid:
-        if agent in text:
-            return agent
-
-    # Semantic keyword fallback — handles paraphrasing
-    if any(w in text for w in ["billing", "checkout", "payment", "pay", "purchase"]):
-        return "billing_agent"
-    if any(w in text for w in ["promo", "marketing", "campaign", "deal", "coupon"]):
-        return "promo_agent"
-
-    return "sales_agent"   # safe default
+_INJECTION_PATTERNS = [
+    (r"ignore\s+(all\s+|previous\s+|your\s+)?instructions", "prompt injection attempt"),
+    (r"(100|full|complete)\s*%\s*(off|discount)",           "extreme discount request"),
+    (r"you\s+are\s+now\s+",                                  "role override attempt"),
+    (r"\bact\s+as\b",                                        "role override attempt"),
+    (r"\bbypass\b",                                          "bypass attempt"),
+    (r"DAN\b",                                               "jailbreak pattern"),
+]
 
 
 # ── System prompts ────────────────────────────────────────────────────────────
 
-_SALES_BASE = """\
-You are an expert Sales Agent for a modern e-commerce store powered by Razorpay Saathi.
+def _sales_system_prompt(state: AgentState) -> str:
+    profile  = state.get("user_profile", {})
+    cart     = state.get("cart", [])
+    ceiling  = state.get("discount_ceiling", _STORE_POLICY["max_discount_pct"])
+    is_agent = state.get("client_type") == "agent"
 
-Rules:
-1. Always cross-sell or upsell a complementary item when any product is mentioned.
-   Example: User wants running shoes → also recommend moisture-wicking socks.
-2. Keep replies concise (2–3 sentences) unless more detail is explicitly asked for.
-3. Never fabricate prices or inventory — say you'll fetch live data from the store DB.
-4. When the buyer signals intent to purchase, confirm the item(s) and instruct them \
-to say "checkout" — you will hand them to the Billing Agent."""
+    name     = profile.get("name", "Customer")
+    tier     = profile.get("tier", "standard").title()
+    history  = profile.get("purchase_history", [])
+    prefs    = profile.get("preferences", [])
 
-_BILLING_BASE = """\
-You are the Billing Agent for Razorpay Saathi — a checkout and payment specialist.
+    history_str = ", ".join(history[-3:]) if history else "none on record"
+    prefs_str   = ", ".join(prefs) if prefs else "not specified"
 
-When a buyer says "checkout" or signals purchase intent:
-1. Confirm the item(s) they want to buy and calculate an estimated total.
-2. Announce that you are querying the Razorpay Offers API for bank-specific \
-discounts (example: HDFC card → 5% cashback, Kotak → ₹500 off on orders above ₹10,000).
-3. State that a Razorpay Payment Link is being generated and will appear as \
-an interactive widget in this chat once the integration is wired.
-4. Ask for any final confirmation (correct address, preferred payment method).
+    a2a_note = (
+        "\nCLIENT TYPE: Automated AI shopping agent. Skip pleasantries. "
+        "Lead with product specs, price, and availability."
+        if is_agent else ""
+    )
 
-Be transactional, fast, and reassuring. The buyer is ready to pay — do not stall."""
+    cart_note = ""
+    if cart:
+        cart_note = "\nCURRENT CART:\n" + "\n".join(
+            f"  • {i.get('name')} × {i.get('qty',1)} @ ₹{i.get('price',0):,}"
+            for i in cart
+        )
 
-_PROMO_BASE = """\
-You are the Promo / Marketing Agent for Razorpay Saathi.
+    return f"""You are the Sales Agent for Razorpay Saathi's agentic store.{a2a_note}
 
-Capabilities:
-- Surface current promotional offers and applicable Razorpay bank deals.
-- Draft outreach copy (email / tweet) for stagnant inventory campaigns.
-- Generate Razorpay Payment Links with Manager-approved discounts.
+CUSTOMER PROFILE (provided by Manager Agent):
+  Name           : {name}
+  Tier           : {tier}
+  Past purchases : {history_str}
+  Preferences    : {prefs_str}
+  Max discount   : {ceiling}% (Manager-approved ceiling — do NOT exceed this)
+{cart_note}
 
-For this session: describe the promotion you would create and which \
-Razorpay API calls you would make (Offers API + Payment Links API)."""
+YOUR RULES:
+1. Personalise every response using the profile above — reference past purchases and preferences.
+2. Always cross-sell a complementary product when any item is mentioned.
+3. Never fabricate prices — say you will fetch live data from the store database.
+4. Never offer more than {ceiling}% discount — the Manager Agent audits every response.
+5. When the customer signals purchase intent, confirm the item(s) and explicitly tell them
+   you are now handing them off to the Billing Agent to complete checkout.
+6. Keep replies to 2–3 sentences unless more detail is requested."""
 
-_AGENT_PROMPTS = {
-    "sales_agent":   _SALES_BASE,
-    "billing_agent": _BILLING_BASE,
-    "promo_agent":   _PROMO_BASE,
+
+def _billing_system_prompt(state: AgentState) -> str:
+    profile  = state.get("user_profile", {})
+    cart     = state.get("cart", [])
+    ceiling  = state.get("discount_ceiling", _STORE_POLICY["max_discount_pct"])
+    is_agent = state.get("client_type") == "agent"
+
+    name = profile.get("name", "Customer")
+    tier = profile.get("tier", "standard").title()
+
+    a2a_note = (
+        "\nCLIENT TYPE: Automated agent. Provide structured payment data."
+        if is_agent else ""
+    )
+
+    cart_block = ""
+    if cart:
+        total = sum(i.get("price", 0) * i.get("qty", 1) for i in cart)
+        cart_block = "\nCART:\n" + "\n".join(
+            f"  • {i.get('name','Item')} × {i.get('qty',1)}  @ ₹{i.get('price',0):,}"
+            for i in cart
+        ) + f"\n  ─────────────────────\n  TOTAL  : ₹{total:,}"
+
+    return f"""You are the Billing Agent for Razorpay Saathi — checkout and payment specialist.
+You were handed this customer by the Sales Agent because they are ready to buy.{a2a_note}
+
+CUSTOMER : {name} ({tier} tier)
+MANAGER-APPROVED DISCOUNT CEILING : {ceiling}%
+{cart_block}
+
+YOUR STEPS:
+1. Confirm the items and total from the cart (or what the customer stated).
+2. Check Razorpay Offers API for bank-specific discounts. Examples:
+     - HDFC credit card  → 5% cashback (up to ₹1,000)
+     - Kotak debit card  → ₹500 off on orders ≥ ₹10,000
+     - Only apply if total discount stays within the {ceiling}% ceiling.
+3. State that a Razorpay Payment Link is being generated and will appear
+   as an interactive widget in this chat.
+4. Confirm payment method preference (UPI / card / net banking).
+
+Be transactional, fast, and reassuring. Do NOT exceed the Manager's discount ceiling."""
+
+
+def _support_system_prompt(state: AgentState) -> str:
+    profile = state.get("user_profile", {})
+    name    = profile.get("name", "Customer")
+    history = profile.get("purchase_history", [])
+    return f"""You are the Customer Support Agent for Razorpay Saathi.
+Customer: {name} | Recent purchases: {', '.join(history[-2:]) if history else 'none'}
+Help with order issues, returns, refunds, complaints. Be empathetic and solution-focused.
+Escalate financial decisions (refunds > ₹1,000) to the Manager Agent."""
+
+
+_PROMPT_BUILDERS = {
+    "sales_agent":   _sales_system_prompt,
+    "billing_agent": _billing_system_prompt,
+    "support_agent": _support_system_prompt,
 }
 
 
-def _build_system_prompt(base: str, state: AgentState) -> str:
-    """Augment base prompt with buyer context — works for both human and AI agent."""
-    client_type   = state.get("client_type", "human")
-    agent_profile = state.get("agent_profile", {})
-    cart          = state.get("cart", [])
-    lines: list[str] = []
-
-    # ── A2A client context ────────────────────────────────────────────────────
-    if client_type == "agent":
-        name   = agent_profile.get("name", "Automated Shopping Agent")
-        budget = agent_profile.get("budget")
-        prefs  = agent_profile.get("preferences", [])
-        curr   = agent_profile.get("currency", "INR")
-
-        lines.append("\n\n── A2A CLIENT ──────────────────────────────────────")
-        lines.append(f"Type        : Automated AI shopping agent")
-        lines.append(f"Name        : {name}")
-        if budget:
-            lines.append(f"Budget      : {curr} {budget:,}")
-        if prefs:
-            lines.append(f"Preferences : {', '.join(prefs)}")
-        lines.append(
-            "Behaviour   : Skip pleasantries. Be structured and efficient. "
-            "Lead every response with data: price, availability, discount."
-        )
-
-    # ── Cart context ──────────────────────────────────────────────────────────
-    if cart:
-        lines.append("\n── CURRENT CART ────────────────────────────────────")
-        total = 0
-        for item in cart:
-            curr_sym = item.get("currency", "INR")
-            price    = item.get("price", 0)
-            qty      = item.get("qty", 1)
-            subtotal = price * qty
-            total   += subtotal
-            lines.append(
-                f"  • {item.get('name', 'Item')} × {qty}  "
-                f"@ {curr_sym} {price:,}  = {curr_sym} {subtotal:,}"
-            )
-        if total:
-            lines.append(f"  TOTAL : {cart[0].get('currency', 'INR')} {total:,}")
-
-    return base + "\n".join(lines)
-
-
-# ── Agent labels (used by main.py for SSE audit events) ──────────────────────
+# ── Agent labels (for SSE audit events) ──────────────────────────────────────
 
 AGENT_LABELS = {
-    "manager":       "Manager Agent",
+    "manager_init":  "Manager Agent",
+    "manager_audit": "Manager Agent",
     "sales_agent":   "Sales Agent",
     "billing_agent": "Billing Agent",
-    "promo_agent":   "Promo Agent",
+    "support_agent": "Support Agent",
 }
 
 
 # ── Nodes ─────────────────────────────────────────────────────────────────────
 
-async def manager_node(state: AgentState) -> dict:
+async def manager_init_node(state: AgentState) -> dict:
     """
-    Routing supervisor. Uses keyword matching first, LLM routing as fallback.
-    Never streams tokens — this call is invisible to the user.
+    Supervisor — runs BEFORE every agent turn.
+    1. Load user profile (first turn only)
+    2. Set discount ceiling (user tier × store policy)
+    3. Detect session phase (browsing / checkout / support)
+    4. Run guardrails on incoming message
     """
-    last_msg = state["messages"][-1].content
+    updates: dict = {}
+    new_entries: list[dict] = []
+    notes = list(state.get("manager_notes", []))
 
-    # 1. Fast keyword routing
-    keyword_hit = _keyword_route(last_msg)
-    if keyword_hit:
-        routing_decision = keyword_hit
-        method = "keyword"
-    else:
-        # 2. LLM routing (small / fast model)
-        llm    = get_routing_llm()
-        prompt = _MANAGER_ROUTING_PROMPT.format(message=last_msg)
-        resp   = await llm.ainvoke([HumanMessage(content=prompt)])
-        routing_decision = _parse_routing_response(resp.content)
-        method = "llm"
+    # ── 1. Load profile ───────────────────────────────────────────────────────
+    profile = state.get("user_profile", {})
+    if not profile:
+        key     = "agent_default" if state.get("client_type") == "agent" else "usr_default"
+        profile = dict(_MOCK_PROFILES[key])
+        # Overlay A2A agent_profile fields if provided
+        ap = state.get("agent_profile", {})
+        if ap:
+            if "name"        in ap: profile["name"]        = ap["name"]
+            if "preferences" in ap: profile["preferences"] = ap["preferences"]
+            if "budget"      in ap:
+                # Translate budget to discount ceiling
+                profile["discount_ceiling_pct"] = min(
+                    profile["discount_ceiling_pct"],
+                    5,   # agents default to conservative ceiling
+                )
+        updates["user_profile"] = profile
 
-    label = AGENT_LABELS.get(routing_decision, routing_decision)
-    return {
-        "next_agent": routing_decision,
-        "audit_log":  state.get("audit_log", []) + [{
+        ceiling = min(
+            profile.get("discount_ceiling_pct", 5),
+            _STORE_POLICY["max_discount_pct"],
+        )
+        updates["discount_ceiling"] = ceiling
+
+        new_entries.append({
             "agent":  "Manager Agent",
-            "detail": f"[{method}] → {label}",
-        }],
+            "detail": (
+                f"Profile loaded: {profile['name']} | "
+                f"{profile['tier'].title()} tier | "
+                f"Spend: ₹{profile['total_spend_inr']:,} | "
+                f"Discount ceiling: {ceiling}%"
+            ),
+        })
+
+    # ── 2. Detect phase ───────────────────────────────────────────────────────
+    last_msg      = state["messages"][-1].content
+    current_phase = state.get("session_phase", "browsing")
+    new_phase     = _detect_phase(last_msg, current_phase)
+    updates["session_phase"] = new_phase
+
+    if new_phase != current_phase:
+        new_entries.append({
+            "agent":  "Manager Agent",
+            "detail": f"Phase: {current_phase} → {new_phase}",
+        })
+
+    # ── 3. Guardrails ─────────────────────────────────────────────────────────
+    violation = None
+    for pattern, label in _INJECTION_PATTERNS:
+        if re.search(pattern, last_msg, re.IGNORECASE):
+            violation = label
+            break
+
+    if violation:
+        notes.append(f"⚠️ Guardrail: {violation} detected in message")
+        new_entries.append({
+            "agent":  "Manager Agent",
+            "detail": f"🚨 GUARDRAIL TRIGGERED: {violation} — request sanitised",
+        })
+    else:
+        target = {"checkout": "Billing", "support": "Support"}.get(new_phase, "Sales")
+        new_entries.append({
+            "agent":  "Manager Agent",
+            "detail": f"Guardrail: OK | Handing to {target} Agent",
+        })
+
+    updates["manager_notes"] = notes
+    updates["audit_log"]     = state.get("audit_log", []) + new_entries
+    return updates
+
+
+async def manager_audit_node(state: AgentState) -> dict:
+    """
+    Supervisor — runs AFTER every agent turn.
+    1. Log the agent's response
+    2. Scan for discount percentage claims — flag if above ceiling
+    """
+    new_entries: list[dict] = []
+    notes = list(state.get("manager_notes", []))
+
+    last_ai = next(
+        (m for m in reversed(state["messages"])
+         if hasattr(m, "type") and m.type == "ai"),
+        None,
+    )
+
+    if last_ai:
+        content = last_ai.content
+        ceiling = state.get("discount_ceiling", _STORE_POLICY["max_discount_pct"])
+
+        # Scan for any discount % claims
+        matches = re.findall(
+            r"(\d+(?:\.\d+)?)\s*%\s*(off|discount|cashback|rebate)",
+            content,
+            re.IGNORECASE,
+        )
+
+        flagged = False
+        for amount_str, discount_type in matches:
+            amount = float(amount_str)
+            if amount > ceiling:
+                flagged = True
+                notes.append(f"VIOLATION: {amount}% {discount_type} exceeds {ceiling}% ceiling")
+                new_entries.append({
+                    "agent":  "Manager Agent",
+                    "detail": (
+                        f"🚨 AUDIT VIOLATION: Agent claimed {amount}% {discount_type} "
+                        f"(ceiling={ceiling}%) — logged for review"
+                    ),
+                })
+            else:
+                new_entries.append({
+                    "agent":  "Manager Agent",
+                    "detail": f"✅ AUDIT: {amount}% {discount_type} within approved {ceiling}% ceiling",
+                })
+
+        if not matches:
+            new_entries.append({
+                "agent":  "Manager Agent",
+                "detail": "✅ AUDIT: Response logged — no financial claims to verify",
+            })
+
+    return {
+        "manager_notes": notes,
+        "audit_log":     state.get("audit_log", []) + new_entries,
     }
 
 
-async def _agent_node(state: AgentState, agent_key: str) -> dict:
-    llm           = get_llm()
-    system_prompt = _build_system_prompt(_AGENT_PROMPTS[agent_key], state)
-    messages      = [SystemMessage(content=system_prompt)] + list(state["messages"])
-    response      = await llm.ainvoke(messages)
-
+async def _run_agent(state: AgentState, agent_key: str) -> dict:
+    llm      = get_llm()
+    prompt   = _PROMPT_BUILDERS[agent_key](state)
+    messages = [SystemMessage(content=prompt)] + list(state["messages"])
+    response = await llm.ainvoke(messages)
     return {
         "messages":  [response],
         "audit_log": state.get("audit_log", []) + [{
             "agent":  AGENT_LABELS[agent_key],
-            "detail": f"Response generated ({len(response.content)} chars)",
+            "detail": f"Response ready ({len(response.content)} chars)",
         }],
     }
 
 
-async def sales_agent_node(state: AgentState)   -> dict:
-    return await _agent_node(state, "sales_agent")
+async def sales_agent_node(state: AgentState) -> dict:
+    return await _run_agent(state, "sales_agent")
 
 async def billing_agent_node(state: AgentState) -> dict:
-    return await _agent_node(state, "billing_agent")
+    return await _run_agent(state, "billing_agent")
 
-async def promo_agent_node(state: AgentState)   -> dict:
-    return await _agent_node(state, "promo_agent")
+async def support_agent_node(state: AgentState) -> dict:
+    return await _run_agent(state, "support_agent")
 
 
-# ── Routing edge ──────────────────────────────────────────────────────────────
+# ── Routing ───────────────────────────────────────────────────────────────────
 
-def route_after_manager(
+def route_to_agent(
     state: AgentState,
-) -> Literal["sales_agent", "billing_agent", "promo_agent"]:
-    return state.get("next_agent", "sales_agent")  # type: ignore[return-value]
+) -> Literal["sales_agent", "billing_agent", "support_agent"]:
+    """Manager-set phase determines agent — not message content."""
+    return {
+        "checkout": "billing_agent",
+        "support":  "support_agent",
+    }.get(state.get("session_phase", "browsing"), "sales_agent")
 
 
-# ── Graph builder ─────────────────────────────────────────────────────────────
+# ── Graph ─────────────────────────────────────────────────────────────────────
 
 def build_graph() -> StateGraph:
     g = StateGraph(AgentState)
 
-    g.add_node("manager",       manager_node)
+    # Supervisor nodes
+    g.add_node("manager_init",  manager_init_node)
+    g.add_node("manager_audit", manager_audit_node)
+
+    # Worker agent nodes
     g.add_node("sales_agent",   sales_agent_node)
     g.add_node("billing_agent", billing_agent_node)
-    g.add_node("promo_agent",   promo_agent_node)
+    g.add_node("support_agent", support_agent_node)
 
-    g.set_entry_point("manager")
+    # Flow: always start with supervisor
+    g.set_entry_point("manager_init")
+
+    # Manager decides which agent based on session phase
     g.add_conditional_edges(
-        "manager",
-        route_after_manager,
+        "manager_init",
+        route_to_agent,
         {
             "sales_agent":   "sales_agent",
             "billing_agent": "billing_agent",
-            "promo_agent":   "promo_agent",
+            "support_agent": "support_agent",
         },
     )
-    g.add_edge("sales_agent",   END)
-    g.add_edge("billing_agent", END)
-    g.add_edge("promo_agent",   END)
+
+    # All agents always report back to manager audit
+    for agent in ("sales_agent", "billing_agent", "support_agent"):
+        g.add_edge(agent, "manager_audit")
+
+    g.add_edge("manager_audit", END)
 
     return g.compile()
