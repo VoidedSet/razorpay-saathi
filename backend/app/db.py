@@ -78,112 +78,15 @@ CREATE TABLE IF NOT EXISTS campaigns (
 
 # ── Seed data: The Souled Store Sneakers ───────────────────────────────────────
 
-_PRODUCTS = [
-    {
-        "id": "prod_shoe_miami",
-        "name": "Souled: Miami",
-        "brand": "The Souled Store",
-        "category": "vintage",
-        "price_inr": 9999,
-        "stock": 35,
-        "description": "A vibrant, retro-inspired sneaker for the Miami soul. Lightweight and comfortable, perfect for a walk by the beach.",
-        "specs": json.dumps({"style": "Retro Runner", "upper": "Breathable Mesh & Suede", "sole": "Wave Foam Cushioning"}),
-        "tags": "vintage,retro,miami,souled,sneaker,beach,lifestyle",
-        "related": "prod_shoe_mafia,prod_shoe_yoda,prod_shoe_ghost",
-        "image_url": "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1743521912_7639983.jpg?w=480&dpr=2",
-    },
-    {
-        "id": "prod_shoe_mafia",
-        "name": "UBZ 0.5: Mafia Mules",
-        "brand": "The Souled Store",
-        "category": "court",
-        "price_inr": 7999,
-        "stock": 22,
-        "description": "Bold and stylish, these mules make a statement. Inspired by classic cinema, they are the epitome of cool.",
-        "specs": json.dumps({"style": "Slip-on Mule", "upper": "Genuine Leather", "sole": "High-Rebound Comfort Sole"}),
-        "tags": "court,mules,mafia,slipon,cinema,stylish",
-        "related": "prod_shoe_miami,prod_shoe_yoda",
-        "image_url": "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1761894000_9908200.jpg?w=1080&dpr=2",
-    },
-    {
-        "id": "prod_shoe_yoda",
-        "name": "Yoda",
-        "brand": "The Souled Store",
-        "category": "classics",
-        "price_inr": 8999,
-        "stock": 18,
-        "description": "Wisdom in every step. These classic green-themed sneakers are a must-have for any fan of the galaxy.",
-        "specs": json.dumps({"style": "High Top Classic", "upper": "Canvas & Leather", "sole": "Gum Rubber Outsole"}),
-        "tags": "classics,yoda,green,galaxy,hightop,iconic",
-        "related": "prod_shoe_ghost,prod_shoe_miami",
-        "image_url": "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1759387261_3013866.jpg?w=1080&dpr=2",
-    },
-    {
-        "id": "prod_shoe_ghost",
-        "name": "Hydros: Ghost",
-        "brand": "The Souled Store",
-        "category": "running",
-        "price_inr": 6999,
-        "stock": 40,
-        "description": "Sleek, minimalist, and fast. The Ghost runners are designed for urban exploration, day or night.",
-        "specs": json.dumps({"style": "Foam Runner", "upper": "Ergonomic Cutouts", "sole": "Ultra-light EVA"}),
-        "tags": "running,ghost,hydros,white,minimalist,urban",
-        "related": "prod_shoe_cyber,prod_shoe_miami",
-        "image_url": "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1754742095_6028923.jpg?w=1080&dpr=2",
-    },
-    {
-        "id": "prod_shoe_hightop",
-        "name": "TSS Originals: Urban High-Tops",
-        "brand": "The Souled Store",
-        "category": "court",
-        "price_inr": 10999,
-        "stock": 25,
-        "description": "High-top silhouette engineered for urban court performance and retro street aesthetics.",
-        "specs": json.dumps({"style": "Retro High-Top", "upper": "Full Grain Leather", "sole": "Traction Rubber"}),
-        "tags": "court,hightop,urban,originals,basketball,streetwear",
-        "related": "prod_shoe_mafia,prod_shoe_stealth",
-        "image_url": "https://images.unsplash.com/photo-1512374382149-233c42b6a83b?w=600&auto=format&fit=crop",
-    },
-    {
-        "id": "prod_shoe_cyber",
-        "name": "Supersonic: Cyber Neon",
-        "brand": "The Souled Store",
-        "category": "running",
-        "price_inr": 8499,
-        "stock": 30,
-        "description": "Dynamic cushioned running sneakers with vibrant neon accents and responsive foam midsoles.",
-        "specs": json.dumps({"style": "Performance Runner", "upper": "Engineered Knit", "sole": "Responsive Foam Midsoles"}),
-        "tags": "running,cyber,neon,supersonic,sport,cushion",
-        "related": "prod_shoe_ghost,prod_shoe_miami",
-        "image_url": "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&auto=format&fit=crop",
-    },
-    {
-        "id": "prod_shoe_canvas",
-        "name": "Vintage 77: Classic Canvas",
-        "brand": "The Souled Store",
-        "category": "classics",
-        "price_inr": 5999,
-        "stock": 50,
-        "description": "Timeless low-profile canvas sneakers crafted for everyday effortless style and comfort.",
-        "specs": json.dumps({"style": "Low-Top Canvas", "upper": "Unbleached Canvas", "sole": "Vulcanized Rubber Trim"}),
-        "tags": "classics,canvas,vintage77,everyday,lowtop,casual",
-        "related": "prod_shoe_yoda,prod_shoe_ghost",
-        "image_url": "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?w=600&auto=format&fit=crop",
-    },
-    {
-        "id": "prod_shoe_stealth",
-        "name": "Apex: Stealth Black",
-        "brand": "The Souled Store",
-        "category": "vintage",
-        "price_inr": 9299,
-        "stock": 15,
-        "description": "Matte black stealth finish with genuine suede overlays and high-traction rubber outsole.",
-        "specs": json.dumps({"style": "Stealth Trainer", "upper": "Matte Suede & Synthetic", "sole": "High-Traction Rubber"}),
-        "tags": "vintage,stealth,black,apex,suede,matte",
-        "related": "prod_shoe_miami,prod_shoe_hightop",
-        "image_url": "https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?w=600&auto=format&fit=crop",
-    },
-]
+CATALOG_PATH = Path(__file__).parent.parent / "catalog.json"
+try:
+    with open(CATALOG_PATH, "r") as f:
+        _PRODUCTS = json.load(f)
+        for p in _PRODUCTS:
+            if isinstance(p.get("specs"), dict):
+                p["specs"] = json.dumps(p["specs"])
+except FileNotFoundError:
+    _PRODUCTS = []
 
 _USERS = [
     {
@@ -300,27 +203,63 @@ def _parse_product(row: dict) -> dict:
     return row
 
 
-def search_products(query: str, limit: int = 6) -> list[dict]:
+def search_products(
+    query: str = "", 
+    limit: int = 6,
+    category: str = None,
+    min_price: int = None,
+    max_price: int = None,
+    specs_filter: dict = None
+) -> list[dict]:
     """
-    Keyword search across name, brand, category, tags.
-    Scores each product by number of query-word matches and returns top results.
+    Keyword and exact-spec search across name, brand, category, tags, and JSON specs.
     """
     words = [w.lower() for w in query.split() if len(w) > 1]
     with _conn() as db:
-        rows = [dict(r) for r in db.execute("SELECT * FROM products WHERE stock > 0").fetchall()]
+        sql = "SELECT * FROM products WHERE stock > 0"
+        params = []
+        if category:
+            sql += " AND category = ?"
+            params.append(category)
+        if min_price is not None:
+            sql += " AND price_inr >= ?"
+            params.append(min_price)
+        if max_price is not None:
+            sql += " AND price_inr <= ?"
+            params.append(max_price)
+            
+        rows = [dict(r) for r in db.execute(sql, params).fetchall()]
 
-    if not words:
+    if not words and not specs_filter:
         return [_parse_product(r) for r in rows[:limit]]
 
     scored: list[tuple[int, dict]] = []
     for row in rows:
-        searchable = f"{row['name']} {row['brand']} {row['category']} {row.get('tags', '')}".lower()
-        score = sum(1 for w in words if w in searchable)
+        parsed_row = _parse_product(row)
+        
+        if specs_filter:
+            row_specs = parsed_row.get("specs", {})
+            match = True
+            for k, v in specs_filter.items():
+                row_val = row_specs.get(k)
+                if isinstance(v, str) and isinstance(row_val, str):
+                    if v.lower() != row_val.lower():
+                        match = False; break
+                elif row_val != v:
+                    match = False; break
+            if not match:
+                continue
+
+        score = 1
+        if words:
+            searchable = f"{parsed_row['name']} {parsed_row['brand']} {parsed_row['category']} {parsed_row.get('tags', '')}".lower()
+            score = sum(1 for w in words if w in searchable)
+            
         if score > 0:
-            scored.append((score, row))
+            scored.append((score, parsed_row))
 
     scored.sort(key=lambda x: -x[0])
-    return [_parse_product(p) for _, p in scored[:limit]]
+    return [p for _, p in scored[:limit]]
 
 
 def get_product(product_id: str) -> Optional[dict]:

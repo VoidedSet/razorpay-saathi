@@ -291,6 +291,59 @@ async def chat(req: ChatRequest):
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
+class A2ANegotiateRequest(BaseModel):
+    buyer_agent_id: str
+    intent: str
+    budget_inr: int
+    requested_category: str = None
+    cart: list[dict] = []
+
+@app.post("/api/a2a/negotiate")
+async def a2a_negotiate(req: A2ANegotiateRequest):
+    """
+    A2A entrypoint for autonomous agents to negotiate with our Store Manager.
+    Returns structured JSON (no SSE streaming).
+    """
+    initial_state = {
+        "messages": [HumanMessage(content=req.intent)],
+        "session_id": f"a2a_{req.buyer_agent_id}_{int(time.time())}",
+        "user_id": req.buyer_agent_id,
+        "session_phase": "browsing",
+        "user_profile": {},
+        "cart": req.cart,
+        "audit_log": [],
+        "manager_notes": [],
+        "discount_ceiling": 0.0, 
+        "client_type": "agent",
+        "agent_profile": {
+            "name": req.buyer_agent_id,
+            "budget_inr": req.budget_inr,
+            "requested_category": req.requested_category
+        },
+        "manager_correction": "",
+        "ui_components": [],
+        "just_entered_checkout": False,
+    }
+    
+    final_state = await _graph.ainvoke(initial_state)
+    
+    last_msg = None
+    if final_state.get("messages"):
+        last_msg = final_state["messages"][-1].content
+
+    components_data = [
+        {"component": c.get("component"), "props": c.get("props")} 
+        for c in final_state.get("ui_components", [])
+    ]
+    
+    return {
+        "status": "success",
+        "response": last_msg,
+        "data_payloads": components_data,
+        "manager_notes": final_state.get("manager_notes", []),
+        "audit_log": final_state.get("audit_log", [])
+    }
+
 
 @app.get("/health")
 async def health():
