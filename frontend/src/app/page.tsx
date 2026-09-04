@@ -383,22 +383,22 @@ const HERO_SLIDES = [
     id: 1,
     title: "YEEZY BOOST 350 V2",
     subtitle: "The icon returns in 'Zebra' colorway.",
-    image: "https://images.unsplash.com/photo-1550399865-ec7d23b18e8e?auto=format&fit=crop&q=80&w=1200",
+    image: "/assets/yeezy_sneakers.png",
     cta: "Shop Now"
   },
   {
     id: 2,
     title: "YEEZY SLIDE 'BONE'",
     subtitle: "Minimalist design, maximum comfort.",
-    image: "https://images.unsplash.com/photo-1608667508764-33cf0726b13a?auto=format&fit=crop&q=80&w=1200",
+    image: "/assets/yeezy_slide_bone.png",
     cta: "Discover More"
   },
   {
     id: 3,
-    title: "FOAM RNNR 'OCHRE'",
-    subtitle: "Aerodynamic lines and futuristic aesthetics.",
-    image: "https://images.unsplash.com/photo-1618354691229-88d47f285158?auto=format&fit=crop&q=80&w=1200",
-    cta: "Explore"
+    title: "YEEZY CARGO PANTS",
+    subtitle: "Utilitarian style. Signature aesthetic.",
+    image: "/assets/yeezy_cargo.png",
+    cta: "Explore Apparel"
   }
 ];
 
@@ -935,28 +935,6 @@ export default function Home() {
           </div>
 
           <div className="header-right">
-            <button
-              type="button"
-              style={{
-                background: "var(--teal-light)",
-                color: "var(--teal-dark)",
-                border: "1px solid var(--teal)",
-                padding: "0.45rem 1rem",
-                borderRadius: "20px",
-                fontFamily: "var(--font-body)",
-                fontSize: "0.85rem",
-                fontWeight: 700,
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                transition: "all 0.2s ease"
-              }}
-              onClick={() => switchStoreMode(mode === "classic" ? "agent" : "classic")}
-            >
-              <span>✨</span>
-              {mode === "classic" ? "Switch to Agentic AI Chat" : "Switch to Catalog Store"}
-            </button>
 
             <div className="cart-icon-wrapper" onClick={() => setCartOpen(true)}>
               <svg className="cart-svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
