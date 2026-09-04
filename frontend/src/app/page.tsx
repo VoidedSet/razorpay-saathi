@@ -403,37 +403,38 @@ const HERO_SLIDES = [
 ];
 
 function HeroCarousel() {
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
+    let animationId: number;
+    const scroll = () => {
+      if (scrollRef.current && !isHovered) {
+        scrollRef.current.scrollLeft += 1.5;
+        if (scrollRef.current.scrollLeft >= scrollRef.current.scrollWidth / 2) {
+          scrollRef.current.scrollLeft = 0;
+        }
+      }
+      animationId = requestAnimationFrame(scroll);
+    };
+    scroll();
+    return () => cancelAnimationFrame(animationId);
+  }, [isHovered]);
+
+  const SCROLL_SLIDES = [...HERO_SLIDES, ...HERO_SLIDES];
 
   return (
-    <div className="hero-carousel-container">
-      {HERO_SLIDES.map((slide, idx) => (
-        <div 
-          key={slide.id} 
-          className={`hero-slide ${idx === currentSlide ? "active" : ""}`}
-          style={{ backgroundImage: `url(${slide.image})` }}
-        >
-          <div className="hero-slide-overlay">
-            <h1 className="hero-slide-title">{slide.title}</h1>
-            <p className="hero-slide-subtitle">{slide.subtitle}</p>
-            <button className="hero-slide-btn">{slide.cta}</button>
+    <div className="stitched-carousel-container" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
+      <div className="stitched-carousel-track" ref={scrollRef}>
+        {SCROLL_SLIDES.map((slide, idx) => (
+          <div key={`${slide.id}-${idx}`} className="stitched-slide">
+            <img src={slide.image} alt={slide.title} className="stitched-slide-img" />
+            <div className="stitched-slide-overlay">
+              <h1 className="hero-slide-title-stitched">{slide.title}</h1>
+              <p className="hero-slide-subtitle-stitched">{slide.subtitle}</p>
+              <button className="hero-slide-btn-stitched">{slide.cta}</button>
+            </div>
           </div>
-        </div>
-      ))}
-      <div className="hero-carousel-dots">
-        {HERO_SLIDES.map((_, idx) => (
-          <button 
-            key={idx} 
-            className={`hero-dot ${idx === currentSlide ? "active" : ""}`}
-            onClick={() => setCurrentSlide(idx)}
-          />
         ))}
       </div>
     </div>
