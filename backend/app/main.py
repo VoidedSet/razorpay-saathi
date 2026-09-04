@@ -21,7 +21,8 @@ from pydantic import BaseModel
 from langchain_core.messages import HumanMessage, AIMessage
 from dotenv import load_dotenv
 
-from app.graph import build_graph, AgentState, AGENT_LABELS
+from app.graph import build_graph
+from app.state import AgentState, AGENT_LABELS
 from app.config import active_config
 from app.db import init_db
 
@@ -354,9 +355,16 @@ async def health():
     }
 
 
+@app.get("/api/products")
+async def get_products(query: str = "", category: str = None, min_price: int = None, max_price: int = None, limit: int = 100):
+    """Returns products from the database, supporting search and filtering."""
+    prods = _db.search_products(query=query, limit=limit, category=category, min_price=min_price, max_price=max_price)
+    return {"products": prods}
+
+
 # ── Marketing / Campaign routes ───────────────────────────────────────────────
 
-from app.graph import run_marketing_campaign
+from app.agents.marketing import run_marketing_campaign
 from app import db as _db
 
 class CampaignRequest(BaseModel):
