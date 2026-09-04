@@ -214,6 +214,9 @@ html, body {
 .sidebar {
   width: 240px;
   flex-shrink: 0;
+  position: sticky;
+  top: 1rem;
+  align-self: start;
 }
 
 .sidebar-card {

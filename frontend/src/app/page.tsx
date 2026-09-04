@@ -221,7 +221,19 @@ function useAgentChat() {
           const raw = line.slice(6).trim();
           if (!raw) continue;
 
-          const event: SseEvent = JSON.parse(raw);
+          const event: any = JSON.parse(raw);
+
+          if (event.type === "done") {
+            if (event.session_phase) setPhase(event.session_phase);
+            if (event.cart) {
+              const newCart = event.cart.map((c: any) => {
+                const p = products.find((p) => p.id === c.product_id);
+                if (!p) return null;
+                return { product: p, quantity: c.quantity, appliedPrice: c.price || p.price };
+              }).filter(Boolean);
+              setCart(newCart as CartItem[]);
+            }
+          }
 
           setMessages((prev) => {
             const next = [...prev];
@@ -237,9 +249,8 @@ function useAgentChat() {
               msg.components = [...msg.components, { component: event.component, props: event.props }];
             } else if (event.type === "error") {
               msg.content = `Agent error: ${event.message}`;
-            } else if (event.type === "done") {
-              if (event.session_phase) setPhase(event.session_phase);
             }
+
             next[next.length - 1] = msg;
             return next;
           });
@@ -399,6 +410,20 @@ const HERO_SLIDES = [
     subtitle: "Utilitarian style. Signature aesthetic.",
     image: "/assets/yeezy_cargo.png",
     cta: "Explore Apparel"
+  },
+  {
+    id: 4,
+    title: "ESSENTIALS HOODIE",
+    subtitle: "Everyday comfort.",
+    image: "/assets/hoodie+cap.png",
+    cta: "Shop Essentials"
+  },
+  {
+    id: 5,
+    title: "YEEZY GAP JACKET",
+    subtitle: "Form meets function.",
+    image: "/assets/jacket.png",
+    cta: "View Collection"
   }
 ];
 
@@ -1127,44 +1152,7 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Manager Actions: Campaign Trigger Panel */}
-            <div className="panel-card campaign-panel">
-              <h3 className="panel-card-title">
-                <span className="manager-icon">🎯</span> Manager Actions
-              </h3>
-              <p className="campaign-panel-desc">Trigger an AI-generated promo campaign with a Razorpay Payment Link.</p>
-              <div className="campaign-product-triggers">
-                {products.slice(0, 12).map((p) => (
-                  <button
-                    key={p.id}
-                    className={`campaign-trigger-btn ${campaignLoading === p.id ? "loading" : ""}`}
-                    disabled={campaignLoading !== null}
-                    onClick={() => triggerCampaign(p.id)}
-                  >
-                    {campaignLoading === p.id ? (
-                      <span className="campaign-spinner" />
-                    ) : (
-                      <span className="campaign-trigger-icon">⚡</span>
-                    )}
-                    <span className="campaign-trigger-label">{p.title}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
 
-            {/* Campaign Results */}
-            {campaignResults.length > 0 && (
-              <div className="campaign-results-feed">
-                <h3 className="panel-card-title" style={{ padding: "0 0 0.5rem 0" }}>Campaign Results</h3>
-                {campaignResults.map((r) => (
-                  <CampaignResultCard
-                    key={r.campaign_id}
-                    result={r}
-                    onDismiss={() => setCampaignResults((prev) => prev.filter((c) => c.campaign_id !== r.campaign_id))}
-                  />
-                ))}
-              </div>
-            )}
           </aside>
         </div>
       )}

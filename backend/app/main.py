@@ -231,6 +231,8 @@ async def langgraph_stream(req: ChatRequest):
                 # Capture updated session phase from manager_init
                 if name == "manager_init" and "session_phase" in output:
                     final_phase = output["session_phase"]
+                if "cart" in output:
+                    final_cart = output["cart"]
 
                 # Manager override → surface it to the customer as a distinct event
                 if name == "manager_audit" and output.get("manager_correction"):
@@ -269,12 +271,14 @@ async def langgraph_stream(req: ChatRequest):
                     if tail:
                         yield _sse({"type": "token", "content": tail})
 
-        # Include updated phase so frontend can persist it
-        yield _sse({"type": "done", "session_phase": final_phase})
+        # Include updated phase and cart so frontend can persist them
+        cart_dicts = [c.dict() if hasattr(c, "dict") else dict(c) for c in final_cart]
+        yield _sse({"type": "done", "session_phase": final_phase, "cart": cart_dicts})
 
     except Exception as exc:
         yield _sse({"type": "error", "message": str(exc)})
-        yield _sse({"type": "done", "session_phase": final_phase})
+        cart_dicts = [c.dict() if hasattr(c, "dict") else dict(c) for c in final_cart]
+        yield _sse({"type": "done", "session_phase": final_phase, "cart": cart_dicts})
 
 
 def _elapsed_ms(start_times: dict, key: str) -> int | None:
