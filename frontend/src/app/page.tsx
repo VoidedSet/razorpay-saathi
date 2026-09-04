@@ -377,6 +377,69 @@ function ProductCard({ props, onViewDetail }: { props: ProductCardProps; onViewD
   );
 }
 
+// ── Hero Banner Carousel ──────────────────────────────────────────────────────
+const HERO_SLIDES = [
+  {
+    id: 1,
+    title: "YEEZY BOOST 350 V2",
+    subtitle: "The icon returns in 'Zebra' colorway.",
+    image: "https://images.unsplash.com/photo-1550399865-ec7d23b18e8e?auto=format&fit=crop&q=80&w=1200",
+    cta: "Shop Now"
+  },
+  {
+    id: 2,
+    title: "YEEZY SLIDE 'BONE'",
+    subtitle: "Minimalist design, maximum comfort.",
+    image: "https://images.unsplash.com/photo-1608667508764-33cf0726b13a?auto=format&fit=crop&q=80&w=1200",
+    cta: "Discover More"
+  },
+  {
+    id: 3,
+    title: "FOAM RNNR 'OCHRE'",
+    subtitle: "Aerodynamic lines and futuristic aesthetics.",
+    image: "https://images.unsplash.com/photo-1618354691229-88d47f285158?auto=format&fit=crop&q=80&w=1200",
+    cta: "Explore"
+  }
+];
+
+function HeroCarousel() {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="hero-carousel-container">
+      {HERO_SLIDES.map((slide, idx) => (
+        <div 
+          key={slide.id} 
+          className={`hero-slide ${idx === currentSlide ? "active" : ""}`}
+          style={{ backgroundImage: `url(${slide.image})` }}
+        >
+          <div className="hero-slide-overlay">
+            <h1 className="hero-slide-title">{slide.title}</h1>
+            <p className="hero-slide-subtitle">{slide.subtitle}</p>
+            <button className="hero-slide-btn">{slide.cta}</button>
+          </div>
+        </div>
+      ))}
+      <div className="hero-carousel-dots">
+        {HERO_SLIDES.map((_, idx) => (
+          <button 
+            key={idx} 
+            className={`hero-dot ${idx === currentSlide ? "active" : ""}`}
+            onClick={() => setCurrentSlide(idx)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Gen UI: Checkout Widget ───────────────────────────────────────────────────
 function CheckoutWidget({ props }: { props: CheckoutWidgetProps }) {
   const total = props.items.reduce((s, i) => s + i.price * i.qty, 0);
@@ -632,10 +695,30 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("featured");
 
+  // Dynamic Catalog State loaded from backend SQLite store
+  const [products, setProducts] = useState<Product[]>(PRODUCTS);
+
+  useEffect(() => {
+    fetch("http://localhost:8000/api/products?limit=100")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.products && Array.isArray(data.products) && data.products.length > 0) {
+          const fetched: Product[] = data.products.map((p: any) => ({
+            id: p.id,
+            title: p.name,
+            category: p.category || "sneakers",
+            price: p.price_inr || 0,
+            image: p.image_url || "https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&q=80&w=800",
+            description: p.description || "",
+          }));
+          setProducts(fetched);
+        }
+      })
+      .catch((err) => console.warn("Using default catalog fallback:", err));
+  }, []);
+
   // Cart State
-  const [cart, setCart] = useState<{ product: Product; quantity: number; appliedPrice: number }[]>([
-    { product: PRODUCTS[0], quantity: 1, appliedPrice: 120 },
-  ]);
+  const [cart, setCart] = useState<{ product: Product; quantity: number; appliedPrice: number }[]>([]);
   const [discount, setDiscount] = useState(0);
   const [cartOpen, setCartOpen] = useState(false);
   const [couponInput, setCouponInput] = useState("");
@@ -762,12 +845,12 @@ export default function Home() {
   const finalTotal = rawSubtotal - discountVal;
 
   // Catalog Filtering
-  const filteredProducts = PRODUCTS.filter((p) => {
+  const filteredProducts = products.filter((p) => {
     const matchesCat =
       category === "all"
         ? true
         : category === "sale"
-        ? p.price < 100
+        ? p.price < 20000
         : p.category === category;
     const matchesSearch =
       p.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -801,20 +884,43 @@ export default function Home() {
             </svg>
             <input
               type="text"
-              placeholder="Search sneakers by name, fit, or category..."
+              placeholder="Search catalog by brand, model, tags..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
 
           <div className="header-right">
+            <button
+              type="button"
+              style={{
+                background: "var(--teal-light)",
+                color: "var(--teal-dark)",
+                border: "1px solid var(--teal)",
+                padding: "0.45rem 1rem",
+                borderRadius: "20px",
+                fontFamily: "var(--font-body)",
+                fontSize: "0.85rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                transition: "all 0.2s ease"
+              }}
+              onClick={() => switchStoreMode(mode === "classic" ? "agent" : "classic")}
+            >
+              <span>✨</span>
+              {mode === "classic" ? "Switch to Agentic AI Chat" : "Switch to Catalog Store"}
+            </button>
+
             <div className="cart-icon-wrapper" onClick={() => setCartOpen(true)}>
               <svg className="cart-svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="9" cy="21" r="1"></circle>
                 <circle cx="20" cy="21" r="1"></circle>
                 <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
               </svg>
-              <span className="cart-badge">{totalCartQty}</span>
+              {totalCartQty > 0 && <span className="cart-badge">{totalCartQty}</span>}
             </div>
           </div>
         </div>
@@ -827,7 +933,7 @@ export default function Home() {
             <div className="sidebar-card">
               <h3 className="sidebar-title">Categories</h3>
               <nav className="category-nav">
-                {["all", "running", "vintage", "court", "classics", "sale"].map((cat) => (
+                {["all", "sneakers", "apparel", "accessories", "sale"].map((cat) => (
                   <a
                     key={cat}
                     href="#"
@@ -838,7 +944,7 @@ export default function Home() {
                     }}
                   >
                     <span style={{ textTransform: "capitalize" }}>
-                      {cat === "all" ? "All Sneakers" : cat}
+                      {cat === "all" ? "All Products" : cat}
                     </span>
                   </a>
                 ))}
@@ -847,6 +953,7 @@ export default function Home() {
           </aside>
 
           <main className="content">
+            {category === "all" && search === "" && <HeroCarousel />}
             <div className="catalog-header">
               <h2 className="section-title">New Arrivals</h2>
               <div className="sort-controls">
@@ -871,7 +978,9 @@ export default function Home() {
                       {p.title}
                     </h3>
                     <div className="price-row">
-                      <span className="current-price">${p.price}</span>
+                      <span className="current-price">
+                        {p.price > 500 ? `₹${p.price.toLocaleString("en-IN")}` : `$${p.price}`}
+                      </span>
                     </div>
                     <button className="add-to-cart-btn" onClick={() => addToCart(p)}>
                       Add to Cart
@@ -955,7 +1064,7 @@ export default function Home() {
             {/* Curated Selection: Auto-scrolling Vertical Carousel */}
             <div className="panel-card">
               <h3 className="panel-card-title">Curated Selection</h3>
-              <CuratedSelectionCarousel products={PRODUCTS} onSelectProduct={(p) => setActiveProduct(p)} />
+              <CuratedSelectionCarousel products={products} onSelectProduct={(p) => setActiveProduct(p)} />
             </div>
 
             {/* Cart Summary with Item Thumbnail Icons */}
@@ -979,14 +1088,14 @@ export default function Home() {
                     {cart.map((i) => (
                       <div key={i.product.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                         <span>{i.product.title} (x{i.quantity})</span>
-                        <span style={{ fontWeight: 700 }}>${(i.appliedPrice * i.quantity).toFixed(2)}</span>
+                        <span style={{ fontWeight: 700 }}>₹{(i.appliedPrice * i.quantity).toLocaleString("en-IN")}</span>
                       </div>
                     ))}
                   </div>
                 )}
                 <div style={{ borderTop: "1px dashed var(--border-warm)", paddingTop: 8, marginTop: 8, display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
                   <span>Total:</span>
-                  <span>${finalTotal.toFixed(2)}</span>
+                  <span>₹{finalTotal.toLocaleString("en-IN")}</span>
                 </div>
               </div>
               <button className="checkout-btn" style={{ marginTop: 12 }} onClick={() => setCartOpen(true)}>
@@ -1001,7 +1110,7 @@ export default function Home() {
               </h3>
               <p className="campaign-panel-desc">Trigger an AI-generated promo campaign with a Razorpay Payment Link.</p>
               <div className="campaign-product-triggers">
-                {PRODUCTS.map((p) => (
+                {products.slice(0, 12).map((p) => (
                   <button
                     key={p.id}
                     className={`campaign-trigger-btn ${campaignLoading === p.id ? "loading" : ""}`}
