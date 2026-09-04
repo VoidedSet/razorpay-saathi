@@ -5,12 +5,8 @@ Runnable two ways:
     cd backend && .venv/bin/python tests/test_guardrails.py     # standalone
     cd backend && .venv/bin/pytest tests/test_guardrails.py     # pytest
 
-Cases are grounded in the real seeded catalog (see app/db.py — The Souled Store):
-    prod_shoe_hightop  ₹10,999   (priciest)
-    prod_shoe_miami    ₹ 9,999
-    prod_shoe_mafia    ₹ 7,999
-    prod_shoe_canvas   ₹ 5,999   (cheapest)
-Alex (usr_001) has a 10% discount ceiling, which we use throughout.
+Cases are grounded in the real seeded catalog (e.g. prod_01 ₹32,000, prod_02 ₹26,500, prod_03 ₹14,500).
+User ceiling = 10.0%.
 """
 
 import pathlib
@@ -30,24 +26,28 @@ db.init_db()
 # ── DIRTY: must be flagged ──────────────────────────────────────────────────
 
 def test_rupee_smuggled_discount():
-    """₹10,999 sneaker 'negotiated' to ₹9,000 (~18%) must trip a price violation."""
-    text = "I can do the prod_shoe_hightop for you at ₹9,000 today."
+    """prod_01 (₹32,000) 'negotiated' to ₹25,000 (~21.8%) must trip a price violation."""
+    p1 = db.get_product("prod_01")
+    assert p1 is not None, "prod_01 must exist in store.db"
+    orig_price = p1["price_inr"]  # 32000
+    quoted_price = 25000  # ~21.8% discount > 10% ceiling
+    text = f"I can do the prod_01 for you at ₹{quoted_price:,} today."
     audit = guardrails.audit_response(text, CEILING)
     assert not audit["clean"]
     assert len(audit["price_violations"]) == 1
     v = audit["price_violations"][0]
-    assert v["product_id"] == "prod_shoe_hightop"
-    assert v["quoted"] == 9000
-    assert v["floor"] == guardrails.floor_price(10999, CEILING)  # 9899
+    assert v["product_id"] == "prod_01"
+    assert v["quoted"] == quoted_price
+    assert v["floor"] == guardrails.floor_price(orig_price, CEILING)
     assert v["effective_pct"] > CEILING
 
 
 def test_hallucinated_product_id():
     """An id that isn't in the catalog must be reported as hallucinated."""
-    text = "Check out the prod_shoe_galaxy, a great limited-edition drop."
+    text = "Check out the prod_shoe_galaxy_fake_99, a great limited-edition drop."
     audit = guardrails.audit_response(text, CEILING)
     assert not audit["clean"]
-    assert "prod_shoe_galaxy" in audit["hallucinated_ids"]
+    assert "prod_shoe_galaxy_fake_99" in audit["hallucinated_ids"]
 
 
 def test_explicit_percent_over_ceiling():
@@ -62,45 +62,49 @@ def test_explicit_percent_over_ceiling():
 
 def test_real_catalog_price_is_clean():
     """Quoting the true catalog price is not a discount."""
-    text = "The prod_shoe_miami is ₹9,999."
+    p2 = db.get_product("prod_02")
+    assert p2 is not None, "prod_02 must exist in store.db"
+    text = f"The prod_02 is ₹{p2['price_inr']:,}."
     audit = guardrails.audit_response(text, CEILING)
     assert audit["clean"], audit
 
 
 def test_discount_within_ceiling_is_clean():
     """8% off under a 10% ceiling is allowed."""
-    text = "I can apply 8% off on the prod_shoe_mafia for you."
+    p3 = db.get_product("prod_03")
+    assert p3 is not None, "prod_03 must exist in store.db"
+    text = f"I can apply 8% off on the {p3['id']} for you."
     audit = guardrails.audit_response(text, CEILING)
     assert audit["clean"], audit
 
 
 def test_two_catalog_priced_items_are_clean():
     """Co-quoting two real products at catalog: one's price must not read as the
-    other's discount (their price bands overlap in the sneaker catalog)."""
-    text = "Pair the prod_shoe_miami (₹9,999) with the prod_shoe_canvas (₹5,999)."
+    other's discount."""
+    p1 = db.get_product("prod_01")
+    p3 = db.get_product("prod_03")
+    text = f"Pair the prod_01 (₹{p1['price_inr']:,}) with the prod_03 (₹{p3['price_inr']:,})."
     audit = guardrails.audit_response(text, CEILING)
     assert audit["clean"], audit
 
 
 def test_bank_offer_amounts_with_cart_are_clean():
     """₹1,000 / ₹500 bank-offer amounts must not be mistaken for a discount on a cart item."""
+    p1 = db.get_product("prod_01")
     text = "With HDFC you get ₹1,000 cashback, and Kotak gives ₹500 off at checkout."
-    cart = [db.get_product("prod_shoe_hightop")]  # ₹10,999 in cart
+    cart = [p1]
     audit = guardrails.audit_response(text, CEILING, cart=cart)
     assert audit["clean"], audit
 
 
 def test_offer_threshold_amount_with_cart_is_clean():
-    """A bank offer's 'on orders ≥ ₹8,000' threshold must not read as a phone discount.
-
-    ₹8,000 sits inside the ₹10,999 shoe's [50%, 100%) band, so without threshold
-    stripping this would be a false price violation.
-    """
+    """A bank offer's 'on orders ≥ ₹20,000' threshold must not read as a discount."""
+    p1 = db.get_product("prod_01")
     text = (
-        "Your order total is ₹10,999. Kotak gives ₹500 off on orders ≥ ₹8,000. "
+        f"Your order total is ₹{p1['price_inr']:,}. Kotak gives ₹1,000 off on orders ≥ ₹20,000. "
         "Pay via the Razorpay link when ready."
     )
-    cart = [db.get_product("prod_shoe_hightop")]
+    cart = [p1]
     audit = guardrails.audit_response(text, CEILING, cart=cart)
     assert audit["clean"], audit
 

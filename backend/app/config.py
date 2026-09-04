@@ -35,7 +35,7 @@ def get_llm(
     --------
     get_llm()                                           # reads .env
     get_llm(provider="anthropic", model="claude-3-haiku-20240307")
-    get_llm(provider="groq", model="llama-3.1-70b-versatile", temperature=0.0)
+    get_llm(provider="groq", model="llama-3.3-70b-versatile", temperature=0.0)
     get_llm(provider="ollama", model="llama3")          # fully local
     """
     _provider    = provider    or os.getenv("LLM_PROVIDER",    "openai")
@@ -44,10 +44,13 @@ def get_llm(
         os.getenv("LLM_TEMPERATURE", "0.7")
     )
 
+    _max_tokens = int(os.getenv("MAX_TOKENS", "300"))
+
     return init_chat_model(
         model=_model,
         model_provider=_provider,
         temperature=_temperature,
+        max_tokens=_max_tokens,
     )
 
 
