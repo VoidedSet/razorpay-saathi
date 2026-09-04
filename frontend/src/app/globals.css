@@ -1907,7 +1907,7 @@ body {
 /* Active Slide: Full Brightness & Scale */
 .stitched-slide.active-slide {
   opacity: 1;
-  filter: brightness(1) contrast(1.05);
+  filter: brightness(1.2) contrast(1.1);
   z-index: 10;
 }
 
@@ -1917,8 +1917,8 @@ body {
 
 /* Next Upcoming Slide: Dimmed A Bit Less (Preview State) */
 .stitched-slide.next-slide {
-  opacity: 0.7;
-  filter: brightness(0.72) grayscale(10%);
+  opacity: 0.65;
+  filter: brightness(0.65) grayscale(10%);
   z-index: 5;
 }
 
@@ -1929,14 +1929,14 @@ body {
 
 /* Dimmed Non-Active Slides */
 .stitched-slide.dimmed-slide {
-  opacity: 0.3;
-  filter: brightness(0.28) grayscale(40%);
+  opacity: 0.5;
+  filter: brightness(0.5) grayscale(30%);
   z-index: 1;
 }
 
 .stitched-slide.dimmed-slide:hover {
-  opacity: 0.55;
-  filter: brightness(0.55);
+  opacity: 0.65;
+  filter: brightness(0.65);
 }
 
 /* Overlay & Content Highlighting (NO GREEN) */
