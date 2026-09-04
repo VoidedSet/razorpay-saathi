@@ -440,6 +440,50 @@ function HeroCarousel() {
   );
 }
 
+// ── Testimonials Carousel ─────────────────────────────────────────────────────
+const TESTIMONIALS = [
+  { id: 1, name: "Rahul S.", rating: 5, text: "Got my Yeezys delivered in 2 days. The AI Agent made it super easy to checkout!" },
+  { id: 2, name: "Sneha P.", rating: 5, text: "Unbelievable experience. The agent found exactly what I wanted and gave me a discount." },
+  { id: 3, name: "Karan V.", rating: 4, text: "Great collection of vintage sneakers. Will definitely buy again." },
+  { id: 4, name: "Anjali M.", rating: 5, text: "The Razorpay instant discount applied flawlessly. Highly recommended store." },
+  { id: 5, name: "Vikram D.", rating: 5, text: "Fastest checkout I've ever experienced. 10/10." },
+  { id: 6, name: "Priya T.", rating: 4, text: "Loved the recommendations the AI gave me. Spot on for my style!" }
+];
+
+function TestimonialsCarousel() {
+  const [offset, setOffset] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setOffset((prev) => (prev + 1) % TESTIMONIALS.length);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const visibleTestimonials = [
+    TESTIMONIALS[offset],
+    TESTIMONIALS[(offset + 1) % TESTIMONIALS.length],
+    TESTIMONIALS[(offset + 2) % TESTIMONIALS.length],
+  ];
+
+  return (
+    <div className="sidebar-card mt-4">
+      <h3 className="sidebar-title">Recent Reviews</h3>
+      <div className="testimonials-wrapper">
+        {visibleTestimonials.map((t, idx) => (
+          <div key={`${t.id}-${idx}`} className="testimonial-item">
+            <div className="testimonial-header">
+              <span className="testimonial-name">{t.name}</span>
+              <span className="testimonial-rating">{"★".repeat(t.rating)}{"☆".repeat(5 - t.rating)}</span>
+            </div>
+            <p className="testimonial-text">"{t.text}"</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Gen UI: Checkout Widget ───────────────────────────────────────────────────
 function CheckoutWidget({ props }: { props: CheckoutWidgetProps }) {
   const total = props.items.reduce((s, i) => s + i.price * i.qty, 0);
@@ -950,6 +994,7 @@ export default function Home() {
                 ))}
               </nav>
             </div>
+            <TestimonialsCarousel />
           </aside>
 
           <main className="content">
