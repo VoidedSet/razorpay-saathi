@@ -1,31 +1,46 @@
 # Razorpay Saathi — Agentic Store
 
-A multi-agent AI commerce platform built with FastAPI + LangGraph (backend) and Next.js (frontend).
+**Razorpay Saathi** is an advanced, AI-driven conversational commerce platform that redefines how users shop online. By combining a modern web interface with a powerful multi-agent backend, it provides a tailored, interactive, and autonomous shopping experience. 
 
-## Stack
-- **Backend:** Python, FastAPI, LangGraph, LangChain
-- **Frontend:** Next.js (App Router), TypeScript
-- **DB (mock):** SQLite
-- **Payments:** Razorpay Payment Links + Offers API
+## What is it?
+At its core, Razorpay Saathi is an intelligent digital salesperson. Instead of making users manually browse through thousands of products, they can simply chat with the AI. The AI agent can understand complex queries, fetch relevant products dynamically, provide personalized recommendations, apply discounts, and generate an instant Razorpay checkout link right within the chat window.
 
-## Getting Started
+## Why build this?
+Traditional e-commerce is highly manual. Users spend a lot of time filtering, searching, and comparing. Razorpay Saathi solves this by:
+1. **Reducing Friction**: Users can say "I want running shoes under $100" and get instant results.
+2. **Generative UI**: Instead of just text, the AI renders rich, interactive React components (like product cards and checkout widgets) in real-time based on the context.
+3. **Seamless Checkout**: Leveraging Razorpay's API, the journey from discovery to payment happens in one fluid conversation.
 
-### Backend
+## Project Structure
+- **`/backend`**: Python, FastAPI, and LangGraph powering the AI agents and business logic.
+- **`/frontend`**: Next.js and TypeScript providing the modern, responsive web application.
+
+## How to use it
+
+To run the full stack locally, you need to start both the backend and frontend servers.
+
+### 1. Start the Backend
 ```bash
 cd backend
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env   # fill in your keys
+cp .env.example .env   # Be sure to add your OpenAI and Razorpay API keys!
 uvicorn app.main:app --reload --port 8000
 ```
+For more details, see the [Backend README](./backend/README.md).
 
-### Frontend
+### 2. Start the Frontend
+In a new terminal window:
 ```bash
 cd frontend
 npm install
-npm run dev   # runs on http://localhost:3000
+npm run dev
 ```
+For more details, see the [Frontend README](./frontend/README.md).
+
+### 3. Open the App
+Visit [http://localhost:3000](http://localhost:3000) in your browser to start chatting with the agent!
 
 ## Architecture
-See [plan.md](./plan.md) for the full multi-agent design document.
+See the [plan.md](./plan.md) file for the full multi-agent technical design document.

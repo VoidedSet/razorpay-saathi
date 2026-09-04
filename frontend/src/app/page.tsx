@@ -166,7 +166,7 @@ const PRODUCTS: Product[] = [
 ];
 
 // ── SSE Agent Chat Hook ───────────────────────────────────────────────────────
-function useAgentChat() {
+function useAgentChat(onCartUpdate?: (cart: any[]) => void) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -225,13 +225,8 @@ function useAgentChat() {
 
           if (event.type === "done") {
             if (event.session_phase) setPhase(event.session_phase);
-            if (event.cart) {
-              const newCart = event.cart.map((c: any) => {
-                const p = products.find((p) => p.id === c.product_id);
-                if (!p) return null;
-                return { product: p, quantity: c.quantity, appliedPrice: c.price || p.price };
-              }).filter(Boolean);
-              setCart(newCart as CartItem[]);
+            if (event.cart && onCartUpdate) {
+              onCartUpdate(event.cart);
             }
           }
 
@@ -428,38 +423,129 @@ const HERO_SLIDES = [
 ];
 
 function HeroCarousel() {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const N = HERO_SLIDES.length;
+  // 3 sets of slides for seamless circular wrapping
+  const TRIPLE_SLIDES = [...HERO_SLIDES, ...HERO_SLIDES, ...HERO_SLIDES];
+
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [currentIndex, setCurrentIndex] = useState(N);
+  const [isTransitioning, setIsTransitioning] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
+  const [offsets, setOffsets] = useState<number[]>([]);
+
+  // Function to measure exact offsetLeft of each slide item based on its intrinsic width
+  const measureOffsets = () => {
+    if (trackRef.current) {
+      const children = Array.from(trackRef.current.children) as HTMLElement[];
+      if (children.length > 0) {
+        const newOffsets = children.map((c) => c.offsetLeft);
+        setOffsets(newOffsets);
+      }
+    }
+  };
 
   useEffect(() => {
-    let animationId: number;
-    const scroll = () => {
-      if (scrollRef.current && !isHovered) {
-        scrollRef.current.scrollLeft += 1.5;
-        if (scrollRef.current.scrollLeft >= scrollRef.current.scrollWidth / 2) {
-          scrollRef.current.scrollLeft = 0;
-        }
-      }
-      animationId = requestAnimationFrame(scroll);
-    };
-    scroll();
-    return () => cancelAnimationFrame(animationId);
+    measureOffsets();
+    window.addEventListener("resize", measureOffsets);
+    return () => window.removeEventListener("resize", measureOffsets);
+  }, []);
+
+  // Auto-advance every 3 seconds if not hovered
+  useEffect(() => {
+    if (isHovered) return;
+    const interval = setInterval(() => {
+      setIsTransitioning(true);
+      setCurrentIndex((prev) => prev + 1);
+    }, 3000);
+    return () => clearInterval(interval);
   }, [isHovered]);
 
-  const SCROLL_SLIDES = [...HERO_SLIDES, ...HERO_SLIDES];
+  // Seamless reset when reaching boundary of middle set
+  const handleTransitionEnd = () => {
+    if (currentIndex >= N * 2) {
+      setIsTransitioning(false);
+      setCurrentIndex(N);
+    } else if (currentIndex < N) {
+      setIsTransitioning(false);
+      setCurrentIndex(N * 2 - 1);
+    }
+  };
+
+  const goToSlide = (idx: number) => {
+    setIsTransitioning(true);
+    setCurrentIndex(N + idx);
+  };
+
+  const goPrev = () => {
+    setIsTransitioning(true);
+    setCurrentIndex((prev) => prev - 1);
+  };
+
+  const goNext = () => {
+    setIsTransitioning(true);
+    setCurrentIndex((prev) => prev + 1);
+  };
+
+  const translateX = offsets[currentIndex] !== undefined ? offsets[currentIndex] : 0;
 
   return (
-    <div className="stitched-carousel-container" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
-      <div className="stitched-carousel-track" ref={scrollRef}>
-        {SCROLL_SLIDES.map((slide, idx) => (
-          <div key={`${slide.id}-${idx}`} className="stitched-slide">
-            <img src={slide.image} alt={slide.title} className="stitched-slide-img" />
-            <div className="stitched-slide-overlay">
-              <h1 className="hero-slide-title-stitched">{slide.title}</h1>
-              <p className="hero-slide-subtitle-stitched">{slide.subtitle}</p>
-              <button className="hero-slide-btn-stitched">{slide.cta}</button>
+    <div
+      className="stitched-carousel-container"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div
+        className="stitched-carousel-track"
+        ref={trackRef}
+        onTransitionEnd={handleTransitionEnd}
+        style={{
+          transform: `translateX(-${translateX}px)`,
+          transition: isTransitioning ? "transform 0.75s cubic-bezier(0.16, 1, 0.3, 1)" : "none",
+        }}
+      >
+        {TRIPLE_SLIDES.map((slide, idx) => {
+          const isActive = idx === currentIndex;
+          const isNext = idx === currentIndex + 1;
+          const stateClass = isActive ? "active-slide" : isNext ? "next-slide" : "dimmed-slide";
+          return (
+            <div
+              key={`${slide.id}-${idx}`}
+              className={`stitched-slide ${stateClass}`}
+              onClick={() => goToSlide(idx % N)}
+            >
+              <img
+                src={slide.image}
+                alt={slide.title}
+                className="stitched-slide-img"
+                onLoad={measureOffsets}
+              />
+              <div className={`stitched-slide-overlay ${isActive ? "visible-overlay" : ""}`}>
+                <h1 className="hero-slide-title-stitched">{slide.title}</h1>
+                <p className="hero-slide-subtitle-stitched">{slide.subtitle}</p>
+                <button className="hero-slide-btn-stitched">{slide.cta} →</button>
+              </div>
             </div>
-          </div>
+          );
+        })}
+      </div>
+
+      {/* Navigation Arrows */}
+      <button className="carousel-nav-btn prev-btn" onClick={goPrev} title="Previous slide">
+        ‹
+      </button>
+      <button className="carousel-nav-btn next-btn" onClick={goNext} title="Next slide">
+        ›
+      </button>
+
+      {/* Indicator Dots */}
+      <div className="carousel-dots-wrapper">
+        {HERO_SLIDES.map((slide, idx) => (
+          <button
+            key={slide.id}
+            className={`carousel-dot ${currentIndex % N === idx ? "active-dot" : ""}`}
+            onClick={() => goToSlide(idx)}
+            title={slide.title}
+          />
         ))}
       </div>
     </div>
@@ -825,8 +911,30 @@ export default function Home() {
   // Gen UI product detail modal (for agent chat product cards)
   const [genProductDetail, setGenProductDetail] = useState<ProductCardProps | null>(null);
 
-  // Agent Chat Hook
-  const { messages, setMessages, input, setInput, streaming, sessionPhase, sendMessage } = useAgentChat();
+  // Agent Chat Hook with dynamic cart sync
+  const { messages, setMessages, input, setInput, streaming, sessionPhase, sendMessage } = useAgentChat((newCartData) => {
+    if (Array.isArray(newCartData)) {
+      const updatedCart = newCartData
+        .map((c: any) => {
+          const pid = c.id || c.product_id;
+          const existingProd = products.find((p) => p.id === pid);
+          const prodObj: Product = existingProd || {
+            id: pid || "item_" + Math.random(),
+            title: c.name || c.title || "Sneakers",
+            category: c.category || "sneakers",
+            price: c.price_inr || c.price || 0,
+            image: c.image_url || c.image || "https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&q=80&w=800",
+            description: c.description || "",
+          };
+          return {
+            product: prodObj,
+            quantity: c.qty || c.quantity || 1,
+            appliedPrice: c.price_inr || c.price || prodObj.price,
+          };
+        });
+      setCart(updatedCart);
+    }
+  });
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Smooth Mode Transition Handler
@@ -943,8 +1051,8 @@ export default function Home() {
       <header className="header">
         <div className="header-container">
           <a href="#" className="logo">
-            <span className="logo-part-1">he</span>
-            <span className="logo-part-2">sprints</span>
+            <span className="logo-part-1">ye</span>
+            <span className="logo-part-2">ezus</span>
           </a>
 
           <div className="search-box">
@@ -976,69 +1084,78 @@ export default function Home() {
 
       {/* VIEW 1: CLASSIC STORE */}
       {mode === "classic" && (
-        <div className="main-layout view-enter-classic">
-          <aside className="sidebar">
-            <div className="sidebar-card">
-              <h3 className="sidebar-title">Categories</h3>
-              <nav className="category-nav">
-                {["all", "sneakers", "apparel", "accessories", "sale"].map((cat) => (
-                  <a
-                    key={cat}
-                    href="#"
-                    className={`category-link ${category === cat ? "active" : ""}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setCategory(cat);
-                    }}
-                  >
-                    <span style={{ textTransform: "capitalize" }}>
-                      {cat === "all" ? "All Products" : cat}
-                    </span>
-                  </a>
-                ))}
-              </nav>
-            </div>
-            <TestimonialsCarousel />
-          </aside>
+        <div className="classic-store-wrapper view-enter-classic">
+          {category === "all" && search === "" && (
+            <section className="hero-carousel-section">
+              <HeroCarousel />
+            </section>
+          )}
 
-          <main className="content">
-            {category === "all" && search === "" && <HeroCarousel />}
-            <div className="catalog-header">
-              <h2 className="section-title">New Arrivals</h2>
-              <div className="sort-controls">
-                <label>Sort by:</label>
-                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                  <option value="featured">Featured</option>
-                  <option value="price-low">Price: Low to High</option>
-                  <option value="price-high">Price: High to Low</option>
-                  <option value="name">Alphabetical</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="product-grid">
-              {filteredProducts.map((p) => (
-                <div key={p.id} className="product-card">
-                  <div className="product-img-wrapper" onClick={() => setActiveProduct(p)}>
-                    <img src={p.image} alt={p.title} />
-                  </div>
-                  <div className="product-info">
-                    <h3 className="product-title" onClick={() => setActiveProduct(p)}>
-                      {p.title}
-                    </h3>
-                    <div className="price-row">
-                      <span className="current-price">
-                        {p.price > 500 ? `₹${p.price.toLocaleString("en-IN")}` : `$${p.price}`}
+          <div className="main-layout">
+            <aside className="sidebar">
+              <div className="sidebar-card">
+                <h3 className="sidebar-title">Categories</h3>
+                <nav className="category-nav">
+                  {["all", "sneakers", "apparel", "accessories", "sale"].map((cat) => (
+                    <a
+                      key={cat}
+                      href="#"
+                      className={`category-link ${category === cat ? "active" : ""}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setCategory(cat);
+                      }}
+                    >
+                      <span style={{ textTransform: "capitalize" }}>
+                        {cat === "all" ? "All Products" : cat}
                       </span>
-                    </div>
-                    <button className="add-to-cart-btn" onClick={() => addToCart(p)}>
-                      Add to Cart
-                    </button>
-                  </div>
+                    </a>
+                  ))}
+                </nav>
+              </div>
+              <TestimonialsCarousel />
+            </aside>
+
+            <main className="content">
+              <div className="catalog-header">
+                <h2 className="section-title">New Arrivals</h2>
+                <div className="sort-controls">
+                  <label>Sort by:</label>
+                  <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                    <option value="featured">Featured</option>
+                    <option value="price-low">Price: Low to High</option>
+                    <option value="price-high">Price: High to Low</option>
+                    <option value="name">Alphabetical</option>
+                  </select>
                 </div>
-              ))}
-            </div>
-          </main>
+              </div>
+
+              <div className="product-grid">
+                {filteredProducts.map((p) => (
+                  <div key={p.id} className="product-card" onClick={() => setActiveProduct(p)}>
+                    <img src={p.image} alt={p.title} className="product-card-img" />
+                    <div className="product-card-overlay">
+                      <div className="product-card-name">{p.title}</div>
+                      <div className="product-card-hover-content">
+                        <span className="product-card-price">
+                          {p.price > 500 ? `₹${p.price.toLocaleString("en-IN")}` : `$${p.price}`}
+                        </span>
+                        <button 
+                          className="product-card-add-btn" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addToCart(p);
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </main>
+          </div>
         </div>
       )}
 
