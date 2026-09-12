@@ -102,7 +102,7 @@ const PRODUCTS: Product[] = [
   {
     id: "prod_shoe_miami",
     title: "Souled: Miami",
-    category: "vintage",
+    category: "sneakers",
     price: 120,
     image: "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1743521912_7639983.jpg?w=480&dpr=2",
     description: "A vibrant, retro-inspired sneaker for the Miami soul. Lightweight and comfortable, perfect for a walk by the beach.",
@@ -110,7 +110,7 @@ const PRODUCTS: Product[] = [
   {
     id: "prod_shoe_mafia",
     title: "UBZ 0.5: Mafia Mules",
-    category: "court",
+    category: "sneakers",
     price: 95,
     image: "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1761894000_9908200.jpg?w=1080&dpr=2",
     description: "Bold and stylish, these mules make a statement. Inspired by classic cinema, they are the epitome of cool.",
@@ -118,7 +118,7 @@ const PRODUCTS: Product[] = [
   {
     id: "prod_shoe_yoda",
     title: "Yoda",
-    category: "classics",
+    category: "sneakers",
     price: 110,
     image: "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1759387261_3013866.jpg?w=1080&dpr=2",
     description: "Wisdom in every step. These classic green-themed sneakers are a must-have for any fan of the galaxy.",
@@ -126,7 +126,7 @@ const PRODUCTS: Product[] = [
   {
     id: "prod_shoe_ghost",
     title: "Hydros: Ghost",
-    category: "running",
+    category: "sneakers",
     price: 85,
     image: "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1754742095_6028923.jpg?w=1080&dpr=2",
     description: "Sleek, minimalist, and fast. The Ghost runners are designed for urban exploration, day or night.",
@@ -134,7 +134,7 @@ const PRODUCTS: Product[] = [
   {
     id: "prod_shoe_hightop",
     title: "TSS Originals: Urban High-Tops",
-    category: "court",
+    category: "sneakers",
     price: 130,
     image: "https://images.unsplash.com/photo-1512374382149-233c42b6a83b?w=600&auto=format&fit=crop",
     description: "High-top silhouette engineered for urban court performance and retro street aesthetics.",
@@ -142,7 +142,7 @@ const PRODUCTS: Product[] = [
   {
     id: "prod_shoe_cyber",
     title: "Supersonic: Cyber Neon",
-    category: "running",
+    category: "sneakers",
     price: 105,
     image: "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&auto=format&fit=crop",
     description: "Dynamic cushioned running sneakers with vibrant neon accents and responsive foam midsoles.",
@@ -150,7 +150,7 @@ const PRODUCTS: Product[] = [
   {
     id: "prod_shoe_canvas",
     title: "Vintage 77: Classic Canvas",
-    category: "classics",
+    category: "sneakers",
     price: 75,
     image: "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?w=600&auto=format&fit=crop",
     description: "Timeless low-profile canvas sneakers crafted for everyday effortless style and comfort.",
@@ -158,7 +158,7 @@ const PRODUCTS: Product[] = [
   {
     id: "prod_shoe_stealth",
     title: "Apex: Stealth Black",
-    category: "vintage",
+    category: "sneakers",
     price: 115,
     image: "https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?w=600&auto=format&fit=crop",
     description: "Matte black stealth finish with genuine suede overlays and high-traction rubber outsole.",
