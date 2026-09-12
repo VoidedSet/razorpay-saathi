@@ -161,6 +161,7 @@ async def langgraph_stream(req: ChatRequest):
     node_start_times:  dict         = {}
     node_models:       dict         = {}
     final_phase:       str          = req.session_phase
+    final_cart:        list         = req.cart
     last_audit_count:  int          = 0   # track which audit entries are new
     last_component_count: int       = 0   # track which ui_components are new
     think:  _ThinkStripper | None   = None  # strips <think>...</think> from the live stream
