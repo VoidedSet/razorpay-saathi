@@ -1269,7 +1269,27 @@ export default function Home() {
               </button>
             </div>
 
-
+            {/* Manager Actions (Campaign) */}
+            <div className="panel-card">
+              <h3 className="panel-card-title">Manager Actions</h3>
+              <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
+                <button 
+                  className="campaign-trigger-btn"
+                  onClick={() => triggerCampaign("prod_06", "stagnant_inventory")}
+                  disabled={campaignLoading === "prod_06"}
+                  style={{ width: "100%", padding: "0.5rem", background: "var(--teal)", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold" }}
+                >
+                  {campaignLoading === "prod_06" ? "Simulating..." : "Simulate Stagnant (Miami)"}
+                </button>
+              </div>
+              <div className="campaign-results-list" style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {campaignResults.map((res, i) => (
+                  <CampaignResultCard key={i} result={res} onDismiss={() => {
+                    setCampaignResults(prev => prev.filter((_, idx) => idx !== i));
+                  }} />
+                ))}
+              </div>
+            </div>
           </aside>
         </div>
       )}
