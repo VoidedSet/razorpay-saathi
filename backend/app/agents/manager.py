@@ -125,7 +125,8 @@ async def manager_audit_node(state: AgentState) -> dict:
     if last_ai:
         ceiling = state.get("discount_ceiling", _HARD_POLICY_MAX_DISCOUNT_PCT)
         cart    = db.get_cart(state.get("session_id", "default"))
-        audit   = guardrails.audit_response(_strip_think(last_ai.content), ceiling, cart)
+        budget  = state.get("agent_profile", {}).get("budget_inr") if state.get("client_type") == "agent" else None
+        audit   = guardrails.audit_response(_strip_think(last_ai.content), ceiling, cart, budget)
 
         new_entries.extend(guardrails.audit_log_entries(audit, ceiling))
 
@@ -140,6 +141,8 @@ async def manager_audit_node(state: AgentState) -> dict:
                 )
             for v in audit["pct_violations"]:
                 notes.append(f"VIOLATION: {v['pct']:g}% {v['type']} > {ceiling:g}% ceiling")
+            for v in audit.get("budget_violations", []):
+                notes.append(f"VIOLATION: {v}")
 
     updates["manager_notes"] = notes
     updates["audit_log"]     = state.get("audit_log", []) + new_entries

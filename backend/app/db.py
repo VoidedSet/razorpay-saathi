@@ -502,21 +502,3 @@ def get_campaigns(limit: int = 20) -> list[dict]:
             "SELECT * FROM campaigns ORDER BY id DESC LIMIT ?", (limit,)
         ).fetchall()
     return [dict(r) for r in rows]
-
-
-def get_abandoned_carts(max_results: int = 10) -> list[dict]:
-    """
-    Return sessions that have items in their cart but have not converted
-    (i.e., they are in the 'carts' table). Used for cart-abandonment campaigns.
-    """
-    with _conn() as db:
-        rows = db.execute(
-            """SELECT c.session_id, GROUP_CONCAT(p.name, ', ') AS products,
-                      SUM(p.price_inr * c.qty) AS cart_total
-               FROM carts c
-               JOIN products p ON p.id = c.product_id
-               GROUP BY c.session_id
-               LIMIT ?""",
-            (max_results,),
-        ).fetchall()
-    return [dict(r) for r in rows]

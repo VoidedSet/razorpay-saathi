@@ -102,7 +102,7 @@ const PRODUCTS: Product[] = [
   {
     id: "prod_shoe_miami",
     title: "Souled: Miami",
-    category: "vintage",
+    category: "sneakers",
     price: 120,
     image: "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1743521912_7639983.jpg?w=480&dpr=2",
     description: "A vibrant, retro-inspired sneaker for the Miami soul. Lightweight and comfortable, perfect for a walk by the beach.",
@@ -110,7 +110,7 @@ const PRODUCTS: Product[] = [
   {
     id: "prod_shoe_mafia",
     title: "UBZ 0.5: Mafia Mules",
-    category: "court",
+    category: "sneakers",
     price: 95,
     image: "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1761894000_9908200.jpg?w=1080&dpr=2",
     description: "Bold and stylish, these mules make a statement. Inspired by classic cinema, they are the epitome of cool.",
@@ -118,7 +118,7 @@ const PRODUCTS: Product[] = [
   {
     id: "prod_shoe_yoda",
     title: "Yoda",
-    category: "classics",
+    category: "sneakers",
     price: 110,
     image: "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1759387261_3013866.jpg?w=1080&dpr=2",
     description: "Wisdom in every step. These classic green-themed sneakers are a must-have for any fan of the galaxy.",
@@ -126,7 +126,7 @@ const PRODUCTS: Product[] = [
   {
     id: "prod_shoe_ghost",
     title: "Hydros: Ghost",
-    category: "running",
+    category: "sneakers",
     price: 85,
     image: "https://prod-img.thesouledstore.com/public/theSoul/uploads/catalog/product/1754742095_6028923.jpg?w=1080&dpr=2",
     description: "Sleek, minimalist, and fast. The Ghost runners are designed for urban exploration, day or night.",
@@ -134,7 +134,7 @@ const PRODUCTS: Product[] = [
   {
     id: "prod_shoe_hightop",
     title: "TSS Originals: Urban High-Tops",
-    category: "court",
+    category: "sneakers",
     price: 130,
     image: "https://images.unsplash.com/photo-1512374382149-233c42b6a83b?w=600&auto=format&fit=crop",
     description: "High-top silhouette engineered for urban court performance and retro street aesthetics.",
@@ -142,7 +142,7 @@ const PRODUCTS: Product[] = [
   {
     id: "prod_shoe_cyber",
     title: "Supersonic: Cyber Neon",
-    category: "running",
+    category: "sneakers",
     price: 105,
     image: "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&auto=format&fit=crop",
     description: "Dynamic cushioned running sneakers with vibrant neon accents and responsive foam midsoles.",
@@ -150,7 +150,7 @@ const PRODUCTS: Product[] = [
   {
     id: "prod_shoe_canvas",
     title: "Vintage 77: Classic Canvas",
-    category: "classics",
+    category: "sneakers",
     price: 75,
     image: "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?w=600&auto=format&fit=crop",
     description: "Timeless low-profile canvas sneakers crafted for everyday effortless style and comfort.",
@@ -158,7 +158,7 @@ const PRODUCTS: Product[] = [
   {
     id: "prod_shoe_stealth",
     title: "Apex: Stealth Black",
-    category: "vintage",
+    category: "sneakers",
     price: 115,
     image: "https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?w=600&auto=format&fit=crop",
     description: "Matte black stealth finish with genuine suede overlays and high-traction rubber outsole.",
@@ -268,9 +268,9 @@ function useAgentChat(onCartUpdate?: (cart: any[]) => void) {
       { type: "audit", agent: "Manager Agent", detail: "AUDIT: products & pricing verified against catalog – no violations", ms: 1 },
     ];
     if (lower.includes("miami") || lower.includes("souled")) {
-      reply = "Manager Agent authorized a 10% discount on Souled: Miami ($120 → $108). Would you like me to add it to your cart?";
-    } else if (lower.includes("under $100") || lower.includes("cheap")) {
-      reply = "Here are verified sneakers under $100: Vintage 77 Canvas ($75), Hydros Ghost ($85), Mafia Mules ($95).";
+      reply = "Manager Agent authorized a 10% discount on Souled: Miami (₹120 → ₹108). Would you like me to add it to your cart?";
+    } else if (lower.includes("under ₹100") || lower.includes("under $100") || lower.includes("cheap")) {
+      reply = "Here are verified sneakers under ₹100: Vintage 77 Canvas (₹75), Hydros Ghost (₹85), Mafia Mules (₹95).";
     }
 
     setTimeout(() => {
@@ -771,7 +771,7 @@ function CuratedSelectionCarousel({
           <img src={p.image} alt={p.title} className="rec-shoe-img" />
           <div className="carousel-card-info">
             <h4 className="rec-shoe-title">{p.title}</h4>
-            <div className="rec-shoe-price">${p.price}</div>
+            <div className="rec-shoe-price">₹{p.price.toLocaleString("en-IN")}</div>
           </div>
         </div>
       ))}
@@ -1200,7 +1200,7 @@ export default function Home() {
 
             <div className="chat-chips-row">
               {[
-                "Find me sneakers under $100",
+                "Find me sneakers under ₹100",
                 "Can you negotiate a deal on Souled: Miami?",
                 "Recommend a daily versatile pair",
                 "Show reasoning steps",
@@ -1269,7 +1269,27 @@ export default function Home() {
               </button>
             </div>
 
-
+            {/* Manager Actions (Campaign) */}
+            <div className="panel-card">
+              <h3 className="panel-card-title">Manager Actions</h3>
+              <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
+                <button 
+                  className="campaign-trigger-btn"
+                  onClick={() => triggerCampaign("prod_06", "stagnant_inventory")}
+                  disabled={campaignLoading === "prod_06"}
+                  style={{ width: "100%", padding: "0.5rem", background: "var(--teal)", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold" }}
+                >
+                  {campaignLoading === "prod_06" ? "Simulating..." : "Simulate Stagnant (Miami)"}
+                </button>
+              </div>
+              <div className="campaign-results-list" style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {campaignResults.map((res, i) => (
+                  <CampaignResultCard key={i} result={res} onDismiss={() => {
+                    setCampaignResults(prev => prev.filter((_, idx) => idx !== i));
+                  }} />
+                ))}
+              </div>
+            </div>
           </aside>
         </div>
       )}
@@ -1313,7 +1333,7 @@ export default function Home() {
                 <img src={i.product.image} alt={i.product.title} className="cart-item-img" />
                 <div className="cart-item-details">
                   <div className="cart-item-title">{i.product.title}</div>
-                  <div className="cart-item-price">${i.appliedPrice.toFixed(2)}</div>
+                  <div className="cart-item-price">₹{i.appliedPrice.toLocaleString("en-IN")}</div>
                   <div className="cart-qty-controls">
                     <button className="qty-btn" onClick={() => updateCartQty(i.product.id, -1)}>-</button>
                     <span>{i.quantity}</span>
@@ -1339,10 +1359,17 @@ export default function Home() {
           <div className="cart-summary-rows">
             <div className="summary-row total-row">
               <span>Total</span>
-              <span>${finalTotal.toFixed(2)}</span>
+              <span>₹{finalTotal.toLocaleString("en-IN")}</span>
             </div>
           </div>
-          <button className="checkout-btn" onClick={() => alert("Mock Razorpay Autonomous Checkout Initiated!")}>
+          <button 
+            className="checkout-btn" 
+            onClick={() => {
+              setCartOpen(false);
+              if (mode !== "agent") switchStoreMode("agent");
+              sendMessage("I want to checkout my cart", messages);
+            }}
+          >
             Proceed to Checkout
           </button>
         </div>
@@ -1360,14 +1387,14 @@ export default function Home() {
               <div className="detail-modal-info">
                 <span className="gen-product-category">{activeProduct.category}</span>
                 <h2 className="detail-modal-name">{activeProduct.title}</h2>
-                <div className="detail-modal-price">${activeProduct.price}</div>
+                <div className="detail-modal-price">₹{activeProduct.price.toLocaleString("en-IN")}</div>
                 <p className="detail-modal-desc">{activeProduct.description}</p>
                 <button
                   className="add-to-cart-btn"
                   style={{ marginTop: "1.5rem" }}
                   onClick={() => { addToCart(activeProduct); setActiveProduct(null); }}
                 >
-                  Add to Cart — ${activeProduct.price}
+                  Add to Cart — ₹{activeProduct.price.toLocaleString("en-IN")}
                 </button>
               </div>
             </div>

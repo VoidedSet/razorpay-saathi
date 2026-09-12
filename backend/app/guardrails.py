@@ -93,6 +93,7 @@ def audit_response(
     text: str,
     ceiling_pct: float,
     cart: Optional[list[dict]] = None,
+    agent_budget: Optional[int] = None,
 ) -> dict:
     """
     Validate one agent response against the catalog and the discount ceiling.
@@ -105,6 +106,7 @@ def audit_response(
             {product_id, name, catalog, quoted, floor, effective_pct}, ...
         ],
         "pct_violations": [{pct: float, type: str}, ...],
+        "budget_violations": [str, ...],
       }
     """
     text = text or ""
@@ -168,12 +170,26 @@ def audit_response(
         if pct > ceiling_pct:
             pct_violations.append({"pct": pct, "type": dtype.lower()})
 
-    clean = not (hallucinated or price_violations or pct_violations)
+    # ── 4. Agent budget constraints (A2A) ────────────────────────────────────
+    budget_violations: list[str] = []
+    if agent_budget is not None:
+        for pid, product in grounded.items():
+            catalog = product.get("price_inr") or product.get("price") or 0
+            if catalog <= 0:
+                continue
+            floor = floor_price(catalog, ceiling_pct)
+            if floor > agent_budget:
+                budget_violations.append(
+                    f"{product.get('name', pid)} (min ₹{floor:,}) exceeds budget ₹{agent_budget:,}"
+                )
+
+    clean = not (hallucinated or price_violations or pct_violations or budget_violations)
     return {
         "clean":            clean,
         "hallucinated_ids": hallucinated,
         "price_violations": price_violations,
         "pct_violations":   pct_violations,
+        "budget_violations": budget_violations,
     }
 
 
@@ -206,6 +222,9 @@ def build_manager_correction(audit: dict, ceiling_pct: float) -> Optional[str]:
             f"• {v['pct']:g}% {v['type']} exceeds the approved {ceiling_pct:g}% ceiling."
         )
 
+    for v in audit.get("budget_violations", []):
+        lines.append(f"• {v} — unaffordable under current discount limits.")
+
     header = "Manager policy override:"
     return header + "\n" + "\n".join(lines)
 
@@ -235,6 +254,12 @@ def audit_log_entries(audit: dict, ceiling_pct: float) -> list[dict]:
         entries.append({
             "agent":  "Manager Agent",
             "detail": f"AUDIT VIOLATION: {v['pct']:g}% {v['type']} exceeds {ceiling_pct:g}% ceiling",
+        })
+
+    for v in audit.get("budget_violations", []):
+        entries.append({
+            "agent":  "Manager Agent",
+            "detail": f"BUDGET VIOLATION: {v}",
         })
 
     if audit.get("clean"):
