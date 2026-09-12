@@ -268,9 +268,9 @@ function useAgentChat(onCartUpdate?: (cart: any[]) => void) {
       { type: "audit", agent: "Manager Agent", detail: "AUDIT: products & pricing verified against catalog – no violations", ms: 1 },
     ];
     if (lower.includes("miami") || lower.includes("souled")) {
-      reply = "Manager Agent authorized a 10% discount on Souled: Miami ($120 → $108). Would you like me to add it to your cart?";
-    } else if (lower.includes("under $100") || lower.includes("cheap")) {
-      reply = "Here are verified sneakers under $100: Vintage 77 Canvas ($75), Hydros Ghost ($85), Mafia Mules ($95).";
+      reply = "Manager Agent authorized a 10% discount on Souled: Miami (₹120 → ₹108). Would you like me to add it to your cart?";
+    } else if (lower.includes("under ₹100") || lower.includes("under $100") || lower.includes("cheap")) {
+      reply = "Here are verified sneakers under ₹100: Vintage 77 Canvas (₹75), Hydros Ghost (₹85), Mafia Mules (₹95).";
     }
 
     setTimeout(() => {
@@ -771,7 +771,7 @@ function CuratedSelectionCarousel({
           <img src={p.image} alt={p.title} className="rec-shoe-img" />
           <div className="carousel-card-info">
             <h4 className="rec-shoe-title">{p.title}</h4>
-            <div className="rec-shoe-price">${p.price}</div>
+            <div className="rec-shoe-price">₹{p.price.toLocaleString("en-IN")}</div>
           </div>
         </div>
       ))}
@@ -1200,7 +1200,7 @@ export default function Home() {
 
             <div className="chat-chips-row">
               {[
-                "Find me sneakers under $100",
+                "Find me sneakers under ₹100",
                 "Can you negotiate a deal on Souled: Miami?",
                 "Recommend a daily versatile pair",
                 "Show reasoning steps",
@@ -1333,7 +1333,7 @@ export default function Home() {
                 <img src={i.product.image} alt={i.product.title} className="cart-item-img" />
                 <div className="cart-item-details">
                   <div className="cart-item-title">{i.product.title}</div>
-                  <div className="cart-item-price">${i.appliedPrice.toFixed(2)}</div>
+                  <div className="cart-item-price">₹{i.appliedPrice.toLocaleString("en-IN")}</div>
                   <div className="cart-qty-controls">
                     <button className="qty-btn" onClick={() => updateCartQty(i.product.id, -1)}>-</button>
                     <span>{i.quantity}</span>
@@ -1359,10 +1359,17 @@ export default function Home() {
           <div className="cart-summary-rows">
             <div className="summary-row total-row">
               <span>Total</span>
-              <span>${finalTotal.toFixed(2)}</span>
+              <span>₹{finalTotal.toLocaleString("en-IN")}</span>
             </div>
           </div>
-          <button className="checkout-btn" onClick={() => alert("Mock Razorpay Autonomous Checkout Initiated!")}>
+          <button 
+            className="checkout-btn" 
+            onClick={() => {
+              setCartOpen(false);
+              if (mode !== "agent") switchStoreMode("agent");
+              sendMessage("I want to checkout my cart", messages);
+            }}
+          >
             Proceed to Checkout
           </button>
         </div>
@@ -1380,14 +1387,14 @@ export default function Home() {
               <div className="detail-modal-info">
                 <span className="gen-product-category">{activeProduct.category}</span>
                 <h2 className="detail-modal-name">{activeProduct.title}</h2>
-                <div className="detail-modal-price">${activeProduct.price}</div>
+                <div className="detail-modal-price">₹{activeProduct.price.toLocaleString("en-IN")}</div>
                 <p className="detail-modal-desc">{activeProduct.description}</p>
                 <button
                   className="add-to-cart-btn"
                   style={{ marginTop: "1.5rem" }}
                   onClick={() => { addToCart(activeProduct); setActiveProduct(null); }}
                 >
-                  Add to Cart — ${activeProduct.price}
+                  Add to Cart — ₹{activeProduct.price.toLocaleString("en-IN")}
                 </button>
               </div>
             </div>
