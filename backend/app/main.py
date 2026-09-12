@@ -384,7 +384,7 @@ async def trigger_campaign(req: CampaignRequest):
     Manager-gated: caps discount at the hard policy ceiling before firing the
     Marketing Agent. Returns the full CampaignResult JSON.
     """
-    from app.graph import _HARD_POLICY_MAX_DISCOUNT_PCT
+    from app.state import _HARD_POLICY_MAX_DISCOUNT_PCT
 
     # Manager inline policy check (mirrors manager_audit guardrail logic)
     if req.discount_pct > _HARD_POLICY_MAX_DISCOUNT_PCT:
