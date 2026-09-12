@@ -33,6 +33,10 @@ init_db()
 
 app = FastAPI(title="Razorpay Saathi — Agentic Store Backend")
 
+# Mount the MCP server as an ASGI sub-application over SSE
+from app.mcp_server import mcp
+app.mount("/mcp", mcp.sse_app())
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],

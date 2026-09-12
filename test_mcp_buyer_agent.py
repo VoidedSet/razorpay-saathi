@@ -14,8 +14,10 @@ import requests
 # Make backend app importable
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "backend"))
 
+# Note (MCP-3): This script tests the MCP functions locally in-process for simplicity.
+# In a real environment, the external agent would connect to the MCP server over
+# the network via the FastAPI SSE mount at `http://localhost:8000/mcp`.
 from app.mcp_server import search_catalog, get_product
-
 API_BASE = "http://localhost:8000"
 
 def run_mcp_buyer_agent_flow():
