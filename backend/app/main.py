@@ -14,7 +14,7 @@ SSE event protocol (JSON on each `data:` line):
 
 import json
 import time
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -307,15 +307,29 @@ class A2ANegotiateRequest(BaseModel):
     budget_inr: int
     requested_category: str = None
     cart: list[dict] = []
+    history: list[dict] = []
 
 @app.post("/api/a2a/negotiate")
-async def a2a_negotiate(req: A2ANegotiateRequest):
+async def a2a_negotiate(req: A2ANegotiateRequest, x_api_key: str = Header(...)):
     """
     A2A entrypoint for autonomous agents to negotiate with our Store Manager.
     Returns structured JSON (no SSE streaming).
     """
+    if x_api_key != "saathi-a2a-secret":
+        raise HTTPException(status_code=401, detail="Invalid API Key")
+
+    # Reconstruct history
+    history_messages = []
+    for msg in req.history:
+        role = msg.get("role", "")
+        content = msg.get("content", "")
+        if role == "user":
+            history_messages.append(HumanMessage(content=content))
+        elif role == "assistant":
+            history_messages.append(AIMessage(content=content))
+
     initial_state = {
-        "messages": [HumanMessage(content=req.intent)],
+        "messages": history_messages + [HumanMessage(content=req.intent)],
         "session_id": f"a2a_{req.buyer_agent_id}_{int(time.time())}",
         "user_id": req.buyer_agent_id,
         "session_phase": "browsing",
@@ -341,15 +355,12 @@ async def a2a_negotiate(req: A2ANegotiateRequest):
     if final_state.get("messages"):
         last_msg = final_state["messages"][-1].content
 
-    components_data = [
-        {"component": c.get("component"), "props": c.get("props")} 
-        for c in final_state.get("ui_components", [])
-    ]
+    cart_dicts = [c.dict() if hasattr(c, "dict") else dict(c) for c in final_state.get("cart", [])]
     
     return {
         "status": "success",
         "response": last_msg,
-        "data_payloads": components_data,
+        "cart_state": cart_dicts,
         "manager_notes": final_state.get("manager_notes", []),
         "audit_log": final_state.get("audit_log", [])
     }

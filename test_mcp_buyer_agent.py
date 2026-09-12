@@ -69,7 +69,8 @@ def run_mcp_buyer_agent_flow():
     print(f"   Payload: intent='{buyer_intent}'")
     
     try:
-        response = requests.post(f"{API_BASE}/api/a2a/negotiate", json=a2a_payload, timeout=10)
+        headers = {"x-api-key": "saathi-a2a-secret"}
+        response = requests.post(f"{API_BASE}/api/a2a/negotiate", json=a2a_payload, headers=headers, timeout=10)
         if response.status_code == 200:
             res_data = response.json()
             print("\n✨ [Step 4] A2A Negotiation Successful! Response received:")
