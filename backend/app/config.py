@@ -54,15 +54,6 @@ def get_llm(
     )
 
 
-def get_routing_llm() -> BaseChatModel:
-    """
-    A fast, cheap model for the Manager's routing decision.
-    Defaults to the same provider but uses a lighter model variant.
-    Override with ROUTING_LLM_MODEL in .env if needed.
-    """
-    provider = os.getenv("LLM_PROVIDER", "openai")
-    model    = os.getenv("ROUTING_LLM_MODEL", os.getenv("LLM_MODEL", "gpt-4o-mini"))
-    return get_llm(provider=provider, model=model, temperature=0.0)
 
 
 def active_config() -> dict:
@@ -71,5 +62,4 @@ def active_config() -> dict:
         "provider":    os.getenv("LLM_PROVIDER", "openai"),
         "model":       os.getenv("LLM_MODEL", "gpt-4o-mini"),
         "temperature": os.getenv("LLM_TEMPERATURE", "0.7"),
-        "routing_model": os.getenv("ROUTING_LLM_MODEL", os.getenv("LLM_MODEL", "gpt-4o-mini")),
     }
