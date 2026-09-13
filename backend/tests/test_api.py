@@ -46,13 +46,30 @@ def test_a2a_negotiate_endpoint():
         "requested_category": "sneakers",
         "cart": []
     }
-    response = client.post("/api/a2a/negotiate", json=payload)
+    response = client.post(
+        "/api/a2a/negotiate",
+        json=payload,
+        headers={"x-api-key": "saathi-a2a-secret"},
+    )
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
     assert "response" in data
-    assert isinstance(data["data_payloads"], list)
+    assert isinstance(data["cart_state"], list)
     assert isinstance(data["manager_notes"], list)
+
+def test_a2a_negotiate_rejects_bad_key():
+    payload = {
+        "buyer_agent_id": "test_agent_001",
+        "intent": "Looking for sneakers",
+        "budget_inr": 15000,
+    }
+    response = client.post(
+        "/api/a2a/negotiate",
+        json=payload,
+        headers={"x-api-key": "wrong-key"},
+    )
+    assert response.status_code == 401
 
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]

@@ -1138,7 +1138,7 @@ export default function Home() {
                       <div className="product-card-name">{p.title}</div>
                       <div className="product-card-hover-content">
                         <span className="product-card-price">
-                          {p.price > 500 ? `₹${p.price.toLocaleString("en-IN")}` : `$${p.price}`}
+                          ₹{p.price.toLocaleString("en-IN")}
                         </span>
                         <button 
                           className="product-card-add-btn" 
