@@ -59,7 +59,8 @@ YOUR STEPS:
 3. Share the Razorpay Payment Link shown above so the customer can pay.
 4. Ask for preferred payment mode (UPI, HDFC Credit Card, Netbanking).
 
-Be transactional, fast, and reassuring. Do NOT use emojis or decorative symbols. Do NOT exceed the Manager's discount ceiling."""
+Be transactional, fast, and reassuring. Do NOT use emojis or decorative symbols. Do NOT exceed the Manager's discount ceiling.
+{state.get("kya_step_up_message", "")}"""
 
 async def billing_agent_node(state: AgentState) -> dict:
     session_id  = state.get("session_id", "default")
@@ -79,6 +80,28 @@ async def billing_agent_node(state: AgentState) -> dict:
         "detail": f"Razorpay API: fetched {len(offers)} bank offer(s) for ₹{total_amount:,} order",
     })
 
+    # ── KYA Delegation Check ──────────────────────────────────────────────────
+    step_up_required = False
+    if state.get("kya_verified") and total_amount > 0:
+        limits = state.get("delegation_limits", {})
+        auto_approve_below = limits.get("auto_approve_below", limits.get("max_txn_inr", 0))
+        
+        if total_amount > auto_approve_below:
+            step_up_required = True
+            state["kya_step_up_message"] = (
+                "\\n\\nKYA DELEGATION LIMIT EXCEEDED:\\n"
+                f"The order total (₹{total_amount:,}) exceeds the agent's auto-approve limit (₹{auto_approve_below:,}). "
+                "Inform the user that step-up consent has been requested, and they must approve this purchase "
+                "in their Connector App before you can proceed."
+            )
+            new_entries.append({
+                "agent": "Billing Agent",
+                "detail": f"KYA Step-Up Required: ₹{total_amount:,} > ₹{auto_approve_below:,} limit",
+            })
+            # Trigger MCP tool call simulation (in a real agent this would be an actual tool call)
+            # For our MVP demo, we just add it to the state to trigger the UI notification.
+            state["step_up_consent_pending"] = True
+
     # Generate a Razorpay Payment Link for the confirmed total (mocked in db.py)
     payment_link_text = ""
     link = None
@@ -94,14 +117,29 @@ async def billing_agent_node(state: AgentState) -> dict:
     components: list[dict] = []
     if cart_items and state.get("just_entered_checkout", True):
         ceiling = state.get("discount_ceiling", _HARD_POLICY_MAX_DISCOUNT_PCT)
-        components.append({
-            "component": "checkout_widget",
-            "props": _checkout_widget_props(cart_items, total_amount, offers, link, ceiling),
-        })
-        new_entries.append({
-            "agent":  "Billing Agent",
-            "detail": f"Gen UI: streamed checkout widget (₹{total_amount:,}, {len(offers)} offer(s))",
-        })
+        
+        if step_up_required:
+            components.append({
+                "component": "kya_step_up_consent",
+                "props": {
+                    "agent_id": state.get("kya_context", {}).get("agent_id", "Unknown"),
+                    "amount_inr": total_amount,
+                    "merchant": "Saathi Store"
+                }
+            })
+            new_entries.append({
+                "agent": "Billing Agent",
+                "detail": "Gen UI: streamed kya_step_up_consent widget"
+            })
+        else:
+            components.append({
+                "component": "checkout_widget",
+                "props": _checkout_widget_props(cart_items, total_amount, offers, link, ceiling),
+            })
+            new_entries.append({
+                "agent":  "Billing Agent",
+                "detail": f"Gen UI: streamed checkout widget (₹{total_amount:,}, {len(offers)} offer(s))",
+            })
 
     prompt   = _billing_system_prompt(state, cart_items, offers_text, payment_link_text)
     llm      = get_llm()

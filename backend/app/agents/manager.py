@@ -22,6 +22,16 @@ async def manager_init_node(state: AgentState) -> dict:
     notes = list(state.get("manager_notes", []))
 
     user_id = state.get("user_id") or "usr_001"
+    
+    # ── KYA Identity Overlay ──────────────────────────────────────────────────────
+    is_kya = state.get("kya_verified", False)
+    kya_ctx = state.get("kya_context", {})
+    if is_kya and kya_ctx:
+        user_id = kya_ctx.get("principal_ref", user_id)
+        new_entries.append({
+            "agent": "Manager Agent",
+            "detail": f"KYA Identity Confirmed: Principal [{user_id}] via Agent [{kya_ctx.get('agent_id')}]"
+        })
 
     # ── 1. Load profile & store financial bounds from SQLite DB ─────────────────
     profile = state.get("user_profile", {})

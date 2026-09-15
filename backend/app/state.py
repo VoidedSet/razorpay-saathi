@@ -25,6 +25,14 @@ class AgentState(TypedDict):
     manager_correction: str       # user-visible Manager override, set by audit when a response is dirty
     ui_components:      list[dict] # generative-UI components streamed to the frontend registry
     just_entered_checkout: bool   # True only on the first turn we enter checkout (gates the widget)
+    
+    # ── KYA Security fields ───────────────────────────────────────────────────────
+    kya_verified:       bool       # True after Security Agent passes
+    kya_context:        dict       # The verified context from connector
+    correlation_id:     str        # Traces entire session back to principal
+    delegation_scope:   list[str]  # ["SC-100", "SC-200"]
+    delegation_limits:  dict       # {"max_txn_inr": 5000, ...}
+    sub_agent_tracker:  dict       # Serialized SubAgentTracker state
 
 # ── Phase detection (pure function — no LLM) ──────────────────────────────────
 

@@ -6,6 +6,7 @@ from app.agents.manager import manager_init_node, manager_audit_node
 from app.agents.sales import sales_agent_node, sales_tools_node
 from app.agents.billing import billing_agent_node
 from app.agents.support import support_agent_node
+from app.agents.security import security_kya_node
 
 # ── Routing ───────────────────────────────────────────────────────────────────
 
@@ -24,11 +25,18 @@ def sales_should_continue(state: AgentState):
         return "sales_tools"
     return "manager_audit"
 
+def route_after_security(state: AgentState):
+    """Route after KYA check."""
+    if state.get("kya_verified"):
+        return "manager_init"
+    return "__end__"
+
 # ── Graph ─────────────────────────────────────────────────────────────────────
 
 def build_graph() -> StateGraph:
     g = StateGraph(AgentState)
 
+    g.add_node("security_kya",  security_kya_node)
     g.add_node("manager_init",  manager_init_node)
     g.add_node("manager_audit", manager_audit_node)
     g.add_node("sales_agent",   sales_agent_node)
@@ -36,7 +44,12 @@ def build_graph() -> StateGraph:
     g.add_node("billing_agent", billing_agent_node)
     g.add_node("support_agent", support_agent_node)
 
-    g.set_entry_point("manager_init")
+    g.set_entry_point("security_kya")
+
+    g.add_conditional_edges("security_kya", route_after_security, {
+        "manager_init": "manager_init",
+        "__end__":      END,
+    })
 
     g.add_conditional_edges(
         "manager_init",

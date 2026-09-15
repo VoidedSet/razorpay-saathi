@@ -76,6 +76,12 @@ interface CheckoutWidgetProps {
   ceiling: number;
 }
 
+interface KyaStepUpConsentProps {
+  agent_id: string;
+  amount_inr: number;
+  merchant: string;
+}
+
 interface UiComponent {
   component: string;
   props: Record<string, unknown>;
@@ -648,6 +654,30 @@ function CheckoutWidget({ props }: { props: CheckoutWidgetProps }) {
   );
 }
 
+// ── Gen UI: KYA Step-Up Consent ──────────────────────────────────────────────
+function KyaStepUpConsent({ props }: { props: KyaStepUpConsentProps }) {
+  return (
+    <div className="gen-checkout-widget" style={{ borderLeft: '4px solid #f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.05)' }}>
+      <div className="gen-checkout-header" style={{ color: '#f59e0b' }}>
+        <span className="gen-checkout-title">⚠️ KYA Step-Up Required</span>
+      </div>
+      <div style={{ padding: '12px 16px', fontSize: '0.9rem', color: '#cbd5e1' }}>
+        <p style={{ marginBottom: '8px' }}>
+          Agent <strong>{props.agent_id}</strong> is attempting a transaction of <strong>₹{props.amount_inr.toLocaleString("en-IN")}</strong> at {props.merchant}.
+        </p>
+        <p>
+          This exceeds the agent's auto-approve delegation limit. Please open your <strong>Connector App</strong> to approve this request before the agent can proceed to payment.
+        </p>
+      </div>
+      <div style={{ display: 'flex', gap: '8px', padding: '12px 16px', borderTop: '1px solid #334155' }}>
+        <div className="gen-checkout-pay-btn" style={{ background: '#334155', color: '#94a3b8', cursor: 'not-allowed', textAlign: 'center', width: '100%', padding: '10px', borderRadius: '6px' }}>
+          Waiting for Approval...
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Gen UI renderer — renders a list of components after the AI bubble ────────
 function GenUIComponents({
   components,
@@ -666,6 +696,9 @@ function GenUIComponents({
         }
         if (comp.component === "checkout_widget") {
           return <CheckoutWidget key={i} props={comp.props as unknown as CheckoutWidgetProps} />;
+        }
+        if (comp.component === "kya_step_up_consent") {
+          return <KyaStepUpConsent key={i} props={comp.props as unknown as KyaStepUpConsentProps} />;
         }
         return null;
       })}

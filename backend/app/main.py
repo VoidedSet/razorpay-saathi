@@ -310,13 +310,14 @@ class A2ANegotiateRequest(BaseModel):
     history: list[dict] = []
 
 @app.post("/api/a2a/negotiate")
-async def a2a_negotiate(req: A2ANegotiateRequest, x_api_key: str = Header(...)):
+async def a2a_negotiate(req: A2ANegotiateRequest, x_kya_proof: str = Header(None)):
     """
     A2A entrypoint for autonomous agents to negotiate with our Store Manager.
     Returns structured JSON (no SSE streaming).
+    Requires a valid KYA proof for store admission.
     """
-    if x_api_key != "saathi-a2a-secret":
-        raise HTTPException(status_code=401, detail="Invalid API Key")
+    if not x_kya_proof:
+        raise HTTPException(status_code=401, detail="Missing KYA Proof in x-kya-proof header")
 
     # Reconstruct history
     history_messages = []

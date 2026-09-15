@@ -5,6 +5,7 @@ test_api.py — Integration tests for FastAPI endpoints in app/main.py.
 import pathlib
 import sys
 from fastapi.testclient import TestClient
+from unittest.mock import patch
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
@@ -38,7 +39,24 @@ def test_campaigns_history_endpoint():
     assert "campaigns" in data
     assert isinstance(data["campaigns"], list)
 
-def test_a2a_negotiate_endpoint():
+@patch("app.main._graph.ainvoke")
+def test_a2a_negotiate_endpoint(mock_ainvoke):
+    import asyncio
+    
+    mock_final_state = {
+        "messages": [
+            type("AIMessage", (), {"content": "Sure, here are some black sneakers under 15000 INR."})()
+        ],
+        "cart": [],
+        "manager_notes": ["Mock note"],
+        "audit_log": [{"agent": "Manager", "detail": "Mock detail"}],
+    }
+    
+    # We need to return a coroutine
+    async def mock_coro(*args, **kwargs):
+        return mock_final_state
+    mock_ainvoke.side_effect = mock_coro
+
     payload = {
         "buyer_agent_id": "test_agent_001",
         "intent": "Looking for black sneakers under 15000 INR",
@@ -49,7 +67,7 @@ def test_a2a_negotiate_endpoint():
     response = client.post(
         "/api/a2a/negotiate",
         json=payload,
-        headers={"x-api-key": "saathi-a2a-secret"},
+        headers={"x-kya-proof": "mocked-valid-proof"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -67,7 +85,7 @@ def test_a2a_negotiate_rejects_bad_key():
     response = client.post(
         "/api/a2a/negotiate",
         json=payload,
-        headers={"x-api-key": "wrong-key"},
+        headers={"x-kya-proof": ""},
     )
     assert response.status_code == 401
 
